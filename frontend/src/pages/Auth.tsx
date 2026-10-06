@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Seo } from "../components/Seo";
 import { Field, inputClass } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -38,8 +38,11 @@ export function SignInPage() {
             <input className={inputClass} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </Field>
           {error && <p className="text-sm text-red-300">{error}</p>}
-          <button className="w-full rounded-md bg-accent py-2.5 text-sm font-semibold text-ink-950">Sign in</button>
+          <button className="btn-primary w-full">Sign in</button>
         </div>
+        <p className="mt-4 text-sm text-slate-400">
+          Demo learner: learner@cybercodelab.local / LearnLab!2026
+        </p>
         <p className="mt-4 text-sm text-slate-400">
           <Link to="/forgot-password" className="text-accent">
             Forgot password
@@ -97,7 +100,7 @@ export function RegisterPage() {
             <input className={inputClass} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </Field>
           {error && <p className="text-sm text-red-300">{error}</p>}
-          <button className="w-full rounded-md bg-accent py-2.5 text-sm font-semibold text-ink-950">Create account</button>
+          <button className="btn-primary w-full">Create account</button>
         </div>
         {verify && (
           <p className="mt-4 text-sm text-slate-300">
@@ -153,7 +156,8 @@ export function ResetPage() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
-  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const [params] = useSearchParams();
+  const token = params.get("token") ?? "";
   return (
     <>
       <Seo title="Choose a new password" description="Set a new CyberCode Lab password." path="/reset-password" />
@@ -186,7 +190,8 @@ export function ResetPage() {
 
 export function VerifyEmailPage() {
   const [msg, setMsg] = useState("Verifying…");
-  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const [params] = useSearchParams();
+  const token = params.get("token") ?? "";
   useEffect(() => {
     api(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
       .then(() => setMsg("Email verified. You can continue learning."))

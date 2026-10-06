@@ -26,6 +26,8 @@ apiRouter.get("/resources/:slug", catalog.getResource);
 
 apiRouter.get("/catalog", catalog.catalogHome);
 apiRouter.get("/learn/path", optionalAuth, learning.learnPath);
+apiRouter.get("/youtube", catalog.youtube);
+apiRouter.get("/announcements", catalog.announcements);
 
 apiRouter.get("/quizzes/:quizId", requireAuth, learning.getQuiz);
 apiRouter.post("/quizzes/:quizId/attempts", requireAuth, validate(quizSubmitSchema), learning.submitQuiz);

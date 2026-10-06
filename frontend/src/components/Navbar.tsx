@@ -104,6 +104,11 @@ export function Navbar() {
                 <Link to="/dashboard" onClick={() => setOpen(false)} className="px-2 py-2">
                   Dashboard
                 </Link>
+                {(user.role === "ADMIN" || user.role === "INSTRUCTOR") && (
+                  <Link to="/admin" onClick={() => setOpen(false)} className="px-2 py-2">
+                    Admin
+                  </Link>
+                )}
                 <button
                   className="px-2 py-2 text-left"
                   onClick={async () => {
