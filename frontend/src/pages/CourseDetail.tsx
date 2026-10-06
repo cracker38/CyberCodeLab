@@ -18,6 +18,8 @@ type Payload = {
   progress: { completed: number; total: number; percent: number };
   continueLesson: { slug: string; title: string } | null;
   quiz?: { id: string; title: string } | null;
+  relatedLabs: { slug: string; title: string; difficulty: string }[];
+  relatedProjects: { slug: string; title: string; difficulty: string }[];
 };
 
 export function CourseDetailPage() {
@@ -41,6 +43,8 @@ export function CourseDetailPage() {
   if (error) return <p className="mx-auto max-w-3xl px-4 py-16 text-red-300">{error}</p>;
   if (!data) return <p className="mx-auto max-w-3xl px-4 py-16 text-slate-400">Loading course…</p>;
   const { course, modules, progress, quiz, continueLesson } = data;
+  const relatedLabs = data.relatedLabs ?? [];
+  const relatedProjects = data.relatedProjects ?? [];
   const first = continueLesson ?? modules.flatMap((m) => m.lessons)[0];
 
   const goLearn = async () => {
@@ -133,6 +137,49 @@ export function CourseDetailPage() {
           <Link to={`/quizzes/${quiz.id}`} className="mt-8 inline-block text-accent">
             Course quiz: {quiz.title} →
           </Link>
+        )}
+        {quiz && !user && (
+          <p className="mt-8 text-sm text-slate-400">
+            <Link to="/signin" className="text-accent">
+              Sign in
+            </Link>{" "}
+            to take the course quiz and save your score.
+          </p>
+        )}
+
+        {(relatedLabs.length > 0 || relatedProjects.length > 0) && (
+          <div className="mt-10 grid gap-8 md:grid-cols-2">
+            {relatedLabs.length > 0 && (
+              <div>
+                <h2 className="font-semibold">Practice next</h2>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {relatedLabs.map((l) => (
+                    <li key={l.slug}>
+                      <Link className="text-accent" to={`/labs/${l.slug}`}>
+                        {l.title}
+                      </Link>{" "}
+                      <span className="text-slate-500">({l.difficulty})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {relatedProjects.length > 0 && (
+              <div>
+                <h2 className="font-semibold">Build next</h2>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {relatedProjects.map((p) => (
+                    <li key={p.slug}>
+                      <Link className="text-accent" to={`/projects/${p.slug}`}>
+                        {p.title}
+                      </Link>{" "}
+                      <span className="text-slate-500">({p.difficulty})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
 
         {progress.percent >= 100 && course.nextCourseSlug && (

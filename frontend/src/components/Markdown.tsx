@@ -18,6 +18,7 @@ export function Markdown({ text }: { text: string }) {
   return (
     <>
       {blocks.map((block, i) => {
+        if (block.startsWith("### ")) return <h3 key={i}>{inline(block.slice(4))}</h3>;
         if (block.startsWith("## ")) return <h2 key={i}>{inline(block.slice(3))}</h2>;
         if (block.startsWith("# ")) return <h2 key={i}>{inline(block.slice(2))}</h2>;
         const lines = block.split("\n");

@@ -16,6 +16,9 @@ export function Footer() {
           <p className="text-sm font-medium text-white">Learn</p>
           <ul className="mt-3 space-y-2 text-sm text-slate-400">
             <li>
+              <Link to="/learn">Roadmap</Link>
+            </li>
+            <li>
               <Link to="/courses">Courses</Link>
             </li>
             <li>

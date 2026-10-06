@@ -43,8 +43,8 @@ body {
   @apply rounded-xl border border-line bg-ink-900/90 shadow-card;
 }
 
-.prose-lesson h2 {
-  @apply mt-8 mb-3 text-xl font-semibold text-white;
+.prose-lesson h3 {
+  @apply mt-6 mb-2 text-lg font-semibold text-white;
 }
 
 .prose-lesson p,

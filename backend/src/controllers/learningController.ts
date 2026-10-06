@@ -300,16 +300,17 @@ export const learnPath = asyncHandler(async (req: Request, res: Response) => {
       | { id: string; title: string; level: string }
       | undefined;
     if (!course) return null;
+    const courseId = course.id;
     const total = num(
-      (db.prepare("SELECT COUNT(*) as c FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = ?").get(course.id) as { c: unknown }).c,
+      (db.prepare("SELECT COUNT(*) as c FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = ?").get(courseId) as { c: unknown }).c,
     );
     let done = 0;
     let enrolled = false;
     let finished = false;
     if (userId) {
-      enrolled = Boolean(db.prepare("SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?").get(userId, course.id));
+      enrolled = Boolean(db.prepare("SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?").get(userId, courseId));
       finished = Boolean(
-        db.prepare("SELECT id FROM enrollments WHERE user_id = ? AND course_id = ? AND completed_at IS NOT NULL").get(userId, course.id),
+        db.prepare("SELECT id FROM enrollments WHERE user_id = ? AND course_id = ? AND completed_at IS NOT NULL").get(userId, courseId),
       );
       done = num(
         (
@@ -318,7 +319,7 @@ export const learnPath = asyncHandler(async (req: Request, res: Response) => {
               `SELECT COUNT(*) as c FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN modules m ON m.id = l.module_id
                WHERE m.course_id = ? AND lp.user_id = ? AND lp.completed = 1`,
             )
-            .get(course.id, userId) as { c: unknown }
+            .get(courseId, userId) as { c: unknown }
         ).c,
       );
     }
@@ -344,6 +345,78 @@ export const learnPath = asyncHandler(async (req: Request, res: Response) => {
       percent: total === 0 ? 0 : Math.round((done / total) * 100),
       status,
     };
-  }).filter(Boolean);
-  res.json({ steps });
+  }).filter(Boolean) as {
+    slug: string;
+    title: string;
+    level: string;
+    percent: number;
+    status: string;
+  }[];
+
+  const current = steps.find((s) => s.status === "in_progress") ?? steps.find((s) => s.status === "next") ?? steps[0];
+  const labForCurrent = current
+    ? (db
+        .prepare(
+          `SELECT l.slug, l.title FROM labs l
+           JOIN courses c ON c.id = l.related_course_id
+           WHERE c.slug = ? AND l.published = 1 ORDER BY l.title LIMIT 1`,
+        )
+        .get(current.slug) as { slug: string; title: string } | undefined)
+    : undefined;
+  const projectForCurrent = current
+    ? (db
+        .prepare(
+          `SELECT p.slug, p.title FROM projects p
+           JOIN courses c ON c.id = p.related_course_id
+           WHERE c.slug = ? AND p.published = 1 ORDER BY p.title LIMIT 1`,
+        )
+        .get(current.slug) as { slug: string; title: string } | undefined)
+    : undefined;
+
+  res.json({
+    signedIn: Boolean(userId),
+    steps,
+    nextAction: current
+      ? {
+          courseSlug: current.slug,
+          courseTitle: current.title,
+          status: current.status,
+          percent: current.percent,
+          lab: labForCurrent ?? null,
+          project: projectForCurrent ?? null,
+        }
+      : null,
+    tracks: [
+      {
+        to: "/courses",
+        label: "Courses",
+        blurb: "Structured lessons, quizzes, and a recommended order.",
+        count: num((db.prepare("SELECT COUNT(*) as c FROM courses WHERE published = 1").get() as { c: unknown }).c),
+      },
+      {
+        to: "/labs",
+        label: "Labs",
+        blurb: "Hands-on practice on systems you control.",
+        count: num((db.prepare("SELECT COUNT(*) as c FROM labs WHERE published = 1").get() as { c: unknown }).c),
+      },
+      {
+        to: "/projects",
+        label: "Projects",
+        blurb: "Build tools you can explain in an interview.",
+        count: num((db.prepare("SELECT COUNT(*) as c FROM projects WHERE published = 1").get() as { c: unknown }).c),
+      },
+      {
+        to: "/resources",
+        label: "Resources",
+        blurb: "Roadmaps, cheat sheets, glossaries, and notes.",
+        count: num((db.prepare("SELECT COUNT(*) as c FROM resources WHERE published = 1").get() as { c: unknown }).c),
+      },
+      {
+        to: "/youtube",
+        label: "YouTube",
+        blurb: "Watch, then come back and practice in a lab.",
+        count: num((db.prepare("SELECT COUNT(*) as c FROM youtube_videos").get() as { c: unknown }).c),
+      },
+    ],
+  });
 });

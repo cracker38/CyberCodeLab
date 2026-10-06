@@ -9,7 +9,7 @@ type HomeData = {
   courses: { slug: string; title: string; subtitle: string; level: string; category: string }[];
   labs: { slug: string; title: string; category: string; difficulty: string; description: string }[];
   projects: { slug: string; title: string; description: string; difficulty: string }[];
-  videos: { youtube_id: string; title: string; description: string }[];
+  videos: { youtubeId: string; title: string; description: string }[];
 };
 
 const fallbackPaths = [
@@ -149,7 +149,7 @@ export function HomePage() {
             <p className="mt-2 text-sm leading-relaxed text-slate-400">Watch, then practice in a lab you control.</p>
             <div className="mt-4 space-y-2">
               {(data?.videos ?? []).map((v) => (
-                <p key={v.youtube_id} className="text-sm text-slate-300">
+                <p key={v.youtubeId} className="text-sm text-slate-300">
                   {v.title}
                 </p>
               ))}

@@ -30,19 +30,61 @@ export function CardLink({
   title,
   children,
   meta,
+  footer,
 }: {
   to: string;
   title: string;
   children: string;
   meta?: string;
+  footer?: ReactNode;
 }) {
   return (
     <Link to={to} className="surface block p-5 transition hover:border-accent/40">
       {meta && <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-accent">{meta}</p>}
       <h3 className="text-lg font-semibold text-white">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-slate-400">{children}</p>
+      {footer}
     </Link>
   );
+}
+
+export function PageHeader({
+  kicker,
+  title,
+  children,
+}: {
+  kicker?: string;
+  title: string;
+  children?: ReactNode;
+}) {
+  return (
+    <header className="max-w-3xl">
+      {kicker && <p className="font-mono text-xs uppercase tracking-widest text-accent">{kicker}</p>}
+      <h1 className={`${kicker ? "mt-2" : ""} text-3xl font-semibold`}>{title}</h1>
+      {children && <div className="mt-3 text-slate-400">{children}</div>}
+    </header>
+  );
+}
+
+export function AsyncState({
+  loading,
+  error,
+  empty,
+  emptyHint,
+  children,
+  hasItems,
+}: {
+  loading: boolean;
+  error: string;
+  empty: string;
+  emptyHint?: string;
+  hasItems: boolean;
+  children: ReactNode;
+}) {
+  if (loading) return <p className="mt-8 text-slate-400">Loading…</p>;
+  if (error) return <p className="mt-8 text-red-300">{error}</p>;
+  if (!hasItems) return <div className="mt-8"><Empty title={empty} hint={emptyHint} /></div>;
+  return <>{children}</>;
 }
 
 export function Notice({ children }: { children: string }) {

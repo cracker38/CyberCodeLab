@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Markdown } from "../components/Markdown";
 import { Seo } from "../components/Seo";
 import { Badge, Notice } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -16,6 +17,7 @@ type LabDetail = {
     instructions: string;
     environmentNote: string;
     relatedCourse: { slug: string; title: string } | null;
+    relatedProject: { slug: string; title: string } | null;
     completed: boolean;
   };
 };
@@ -24,14 +26,22 @@ export function LabDetailPage() {
   const { slug } = useParams();
   const { user } = useAuth();
   const [data, setData] = useState<LabDetail | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const load = () => {
-    api<LabDetail>(`/api/labs/${slug}`).then(setData);
+    api<LabDetail>(`/api/labs/${slug}`)
+      .then((d) => {
+        setData(d);
+        setError("");
+      })
+      .catch((e: Error) => setError(e.message));
   };
   useEffect(() => {
     load();
   }, [slug]);
 
+  if (error) return <p className="mx-auto max-w-3xl px-4 py-16 text-red-300">{error}</p>;
   if (!data) return <p className="px-4 py-16 text-center text-slate-400">Loading lab…</p>;
   const { lab } = data;
   return (
@@ -53,27 +63,51 @@ export function LabDetailPage() {
             <li key={o}>{o}</li>
           ))}
         </ul>
-        <pre className="prose-lesson mt-8 whitespace-pre-wrap rounded-xl border border-line bg-ink-900 p-5 text-sm text-slate-300">
-          {lab.instructions}
-        </pre>
-        {lab.relatedCourse && (
-          <p className="mt-6 text-sm text-slate-400">
-            Related course:{" "}
-            <Link className="text-accent" to={`/courses/${lab.relatedCourse.slug}`}>
-              {lab.relatedCourse.title}
-            </Link>
-          </p>
-        )}
+        <div className="prose-lesson mt-8 rounded-xl border border-line bg-ink-900 p-5">
+          <Markdown text={lab.instructions} />
+        </div>
+        <div className="mt-6 space-y-2 text-sm text-slate-400">
+          {lab.relatedCourse && (
+            <p>
+              Related course:{" "}
+              <Link className="text-accent" to={`/courses/${lab.relatedCourse.slug}`}>
+                {lab.relatedCourse.title}
+              </Link>
+            </p>
+          )}
+          {lab.relatedProject && (
+            <p>
+              Related project:{" "}
+              <Link className="text-accent" to={`/projects/${lab.relatedProject.slug}`}>
+                {lab.relatedProject.title}
+              </Link>
+            </p>
+          )}
+        </div>
         {user && !lab.completed && (
           <button
-            className="mt-8 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-ink-950"
+            className="btn-primary mt-8"
+            disabled={busy}
             onClick={async () => {
-              await api(`/api/labs/${lab.slug}/complete`, { method: "POST" });
-              load();
+              setBusy(true);
+              try {
+                await api(`/api/labs/${lab.slug}/complete`, { method: "POST" });
+                load();
+              } finally {
+                setBusy(false);
+              }
             }}
           >
             Mark lab complete
           </button>
+        )}
+        {!user && (
+          <p className="mt-8 text-sm text-slate-400">
+            <Link className="text-accent" to="/signin">
+              Sign in
+            </Link>{" "}
+            to mark this lab complete and see it on your dashboard.
+          </p>
         )}
         {lab.completed && <p className="mt-8 text-sm text-accent">Lab completed.</p>}
       </div>

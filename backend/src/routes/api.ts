@@ -14,7 +14,7 @@ apiRouter.post("/courses/:slug/enroll", requireAuth, courses.enroll);
 apiRouter.get("/courses/:slug/lessons/:lessonSlug", optionalAuth, courses.getLesson);
 apiRouter.post("/lessons/:lessonId/complete", requireAuth, courses.completeLesson);
 
-apiRouter.get("/labs", catalog.listLabs);
+apiRouter.get("/labs", optionalAuth, catalog.listLabs);
 apiRouter.get("/labs/:slug", optionalAuth, catalog.getLab);
 apiRouter.post("/labs/:slug/complete", requireAuth, catalog.completeLab);
 

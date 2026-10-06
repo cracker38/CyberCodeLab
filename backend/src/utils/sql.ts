@@ -8,3 +8,11 @@ export function num(value: unknown): number {
 export function bool(value: unknown): boolean {
   return value === 1 || value === true || value === "1";
 }
+
+export function likeContains(raw: string): string {
+  return `%${raw.replace(/[%_]/g, "")}%`;
+}
+
+export function isYouTubeId(value: string): boolean {
+  return /^[a-zA-Z0-9_-]{11}$/.test(value);
+}
