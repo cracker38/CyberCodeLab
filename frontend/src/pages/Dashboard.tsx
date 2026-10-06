@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { AuthGate } from "../components/AuthGate";
 import { Seo } from "../components/Seo";
 import { Empty, Field, ProgressBar, inputClass } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -43,7 +44,13 @@ export function DashboardPage() {
   }, [user]);
 
   if (loading) return <p className="px-4 py-16 text-center text-slate-400">Loading…</p>;
-  if (!user) return <Navigate to="/signin" replace />;
+  if (!user) {
+    return (
+      <AuthGate>
+        <p className="px-4 py-16 text-center text-slate-400">Loading dashboard…</p>
+      </AuthGate>
+    );
+  }
   if (!data) return <p className="px-4 py-16 text-center text-slate-400">Loading dashboard…</p>;
 
   return (

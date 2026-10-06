@@ -1,5 +1,6 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { SiteLayout } from "./layouts/SiteLayout";
+import { StaffLayout } from "./layouts/StaffLayout";
 import { AboutPage } from "./pages/About";
 import { AdminPage } from "./pages/Admin";
 import { ForgotPage, RegisterPage, ResetPage, SignInPage, VerifyEmailPage } from "./pages/Auth";
@@ -8,6 +9,7 @@ import { CourseDetailPage } from "./pages/CourseDetail";
 import { CoursesPage } from "./pages/Courses";
 import { DashboardPage } from "./pages/Dashboard";
 import { HomePage } from "./pages/Home";
+import { InstructorPage } from "./pages/Instructor";
 import { LabDetailPage } from "./pages/LabDetail";
 import { LabsPage } from "./pages/Labs";
 import { LearnPage } from "./pages/Learn";
@@ -23,6 +25,10 @@ import { YouTubePage } from "./pages/YouTube";
 export default function App() {
   return (
     <Routes>
+      <Route element={<StaffLayout />}>
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/instructor" element={<InstructorPage />} />
+      </Route>
       <Route element={<SiteLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/learn" element={<LearnPage />} />
@@ -39,15 +45,14 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/get-started" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPage />} />
         <Route path="/reset-password" element={<ResetPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/admin" element={<AdminPage />} />
         <Route path="/quizzes/:quizId" element={<QuizPage />} />
         <Route path="/certificates/:id" element={<CertificatePage />} />
         <Route path="/verify/:id" element={<CertificatePage />} />
-        <Route path="/get-started" element={<Navigate to="/register" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

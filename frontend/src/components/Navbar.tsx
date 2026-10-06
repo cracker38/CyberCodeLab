@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 const links = [
@@ -16,7 +16,6 @@ const links = [
 export function Navbar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 bg-ink-950/85 backdrop-blur-md">
@@ -48,16 +47,16 @@ export function Navbar() {
                 Dashboard
               </Link>
               {(user.role === "ADMIN" || user.role === "INSTRUCTOR") && (
-                <Link to="/admin" className="rounded-md px-3 py-1.5 text-sm text-slate-300 hover:text-white">
-                  Admin
+                <Link
+                  to={user.role === "ADMIN" ? "/admin" : "/instructor"}
+                  className="rounded-md px-3 py-1.5 text-sm text-slate-300 hover:text-white"
+                >
+                  {user.role === "ADMIN" ? "Admin" : "Instructor"}
                 </Link>
               )}
               <button
                 className="rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-white"
-                onClick={async () => {
-                  await logout();
-                  navigate("/");
-                }}
+                onClick={() => void logout()}
               >
                 Sign out
               </button>
@@ -105,8 +104,12 @@ export function Navbar() {
                   Dashboard
                 </Link>
                 {(user.role === "ADMIN" || user.role === "INSTRUCTOR") && (
-                  <Link to="/admin" onClick={() => setOpen(false)} className="px-2 py-2">
-                    Admin
+                  <Link
+                    to={user.role === "ADMIN" ? "/admin" : "/instructor"}
+                    onClick={() => setOpen(false)}
+                    className="px-2 py-2"
+                  >
+                    {user.role === "ADMIN" ? "Admin" : "Instructor"}
                   </Link>
                 )}
                 <button
@@ -114,7 +117,6 @@ export function Navbar() {
                   onClick={async () => {
                     await logout();
                     setOpen(false);
-                    navigate("/");
                   }}
                 >
                   Sign out

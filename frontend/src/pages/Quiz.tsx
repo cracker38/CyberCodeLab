@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { AuthGate } from "../components/AuthGate";
 import { Seo } from "../components/Seo";
 import { ProgressBar } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -40,8 +41,14 @@ export function QuizPage() {
     load();
   }, [quizId, user]);
 
-  if (loading) return null;
-  if (!user) return <Navigate to="/signin" replace />;
+  if (loading) return <p className="px-4 py-16 text-center text-slate-400">Loading…</p>;
+  if (!user) {
+    return (
+      <AuthGate>
+        <p className="px-4 py-16 text-center text-slate-400">Loading quiz…</p>
+      </AuthGate>
+    );
+  }
   if (error) return <p className="px-4 py-16 text-center text-red-300">{error}</p>;
   if (!data) return <p className="px-4 py-16 text-center text-slate-400">Loading quiz…</p>;
 

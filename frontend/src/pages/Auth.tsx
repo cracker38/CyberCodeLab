@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Seo } from "../components/Seo";
 import { Field, inputClass } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError, api } from "../services/api";
 
 export function SignInPage() {
-  const { refresh } = useAuth();
-  const navigate = useNavigate();
+  const { user, refresh } = useAuth();
   const [email, setEmail] = useState("learner@cybercodelab.local");
   const [password, setPassword] = useState("LearnLab!2026");
   const [error, setError] = useState("");
@@ -23,7 +22,6 @@ export function SignInPage() {
           try {
             await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
             await refresh();
-            navigate("/dashboard");
           } catch (err) {
             setError(err instanceof ApiError ? err.message : "Could not sign in.");
           }
@@ -38,6 +36,25 @@ export function SignInPage() {
             <input className={inputClass} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </Field>
           {error && <p className="text-sm text-red-300">{error}</p>}
+          {user && (
+            <div className="rounded-lg border border-accent/30 bg-accent/10 p-3 text-sm text-teal-100">
+              Signed in as {user.fullName}. Stay here or open{" "}
+              {user.role === "ADMIN" ? (
+                <Link className="text-accent underline" to="/admin">
+                  Admin
+                </Link>
+              ) : user.role === "INSTRUCTOR" ? (
+                <Link className="text-accent underline" to="/instructor">
+                  Instructor
+                </Link>
+              ) : (
+                <Link className="text-accent underline" to="/dashboard">
+                  Dashboard
+                </Link>
+              )}
+              .
+            </div>
+          )}
           <button className="btn-primary w-full">Sign in</button>
         </div>
         <p className="mt-4 text-sm text-slate-400">
@@ -59,7 +76,6 @@ export function SignInPage() {
 
 export function RegisterPage() {
   const { refresh } = useAuth();
-  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,7 +97,6 @@ export function RegisterPage() {
             });
             await refresh();
             if (data.verifyToken) setVerify(data.verifyToken);
-            else navigate("/dashboard");
           } catch (err) {
             setError(err instanceof ApiError ? err.message : "Could not register.");
           }
