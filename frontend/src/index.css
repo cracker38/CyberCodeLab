@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-ink-950 text-slate-100 antialiased;
+}
+
+* {
+  outline-offset: 2px;
+}
+
+:focus-visible {
+  @apply outline outline-2 outline-accent;
+}
+
+.prose-lesson h2 {
+  @apply mt-8 mb-3 text-xl font-semibold text-white;
+}
+
+.prose-lesson p,
+.prose-lesson li {
+  @apply text-slate-300 leading-relaxed;
+}
+
+.prose-lesson ul {
+  @apply my-4 list-disc space-y-1 pl-5;
+}
+
+.prose-lesson ol {
+  @apply my-4 list-decimal space-y-1 pl-5;
+}
+
+.prose-lesson code {
+  @apply font-mono text-[0.9em] text-accent;
+}
+
+.prose-lesson strong {
+  @apply text-white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

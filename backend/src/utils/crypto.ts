@@ -14,7 +14,10 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 }
 
 export function signToken(payload: { sub: string; role: string }): string {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn, issuer: "cybercode-lab" });
+  return jwt.sign(payload, env.jwtSecret, {
+    expiresIn: env.jwtExpiresIn as jwt.SignOptions["expiresIn"],
+    issuer: "cybercode-lab",
+  });
 }
 
 export function verifyToken(token: string): { sub: string; role: string } {
