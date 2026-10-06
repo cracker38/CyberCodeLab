@@ -4,7 +4,7 @@ import { env } from "../config/env.js";
 export function sessionCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: env.isProd ? "none" : "lax",
     secure: env.isProd,
     path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,

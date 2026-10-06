@@ -22,7 +22,14 @@ export function createApp() {
   );
   app.use(
     cors({
-      origin: env.frontendOrigin,
+      origin(origin, callback) {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        const normalized = origin.replace(/\/$/, "");
+        callback(null, env.frontendOrigins.includes(normalized));
+      },
       credentials: true,
     }),
   );
@@ -41,7 +48,7 @@ export function createApp() {
     res.json({ ok: true, name: "CyberCode Lab API", health: "/api/health" });
   });
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, name: "CyberCode Lab API" });
+    res.json({ ok: true, name: "CyberCode Lab API", frontendOrigins: env.frontendOrigins });
   });
 
   app.use("/api/auth", authRouter);

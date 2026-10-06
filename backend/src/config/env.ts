@@ -13,10 +13,22 @@ function required(name: string, fallback?: string): string {
   return value;
 }
 
+function parseOrigins(): string[] {
+  const raw = process.env.FRONTEND_ORIGIN ?? "http://localhost:5173";
+  const origins = raw
+    .split(",")
+    .map((s) => s.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  return origins.length > 0 ? origins : ["http://localhost:5173"];
+}
+
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   nodeEnv: process.env.NODE_ENV ?? "development",
-  frontendOrigin: process.env.FRONTEND_ORIGIN ?? "http://localhost:5173",
+  frontendOrigins: parseOrigins(),
+  get frontendOrigin() {
+    return this.frontendOrigins[0];
+  },
   databasePath: path.resolve(backendRoot, process.env.DATABASE_PATH ?? "../database/cybercode.db"),
   jwtSecret: required("JWT_SECRET", "dev-only-change-me-please-use-a-long-secret"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
