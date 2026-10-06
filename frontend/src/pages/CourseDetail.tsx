@@ -67,7 +67,7 @@ export function CourseDetailPage() {
         <p className="mt-3 text-slate-400">{course.description}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge>{course.level}</Badge>
-          <Badge>{course.estimatedHours} hours</Badge>
+          <Badge>{`${course.estimatedHours} hours`}</Badge>
         </div>
 
         <div className="surface mt-8 p-5">

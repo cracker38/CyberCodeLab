@@ -13,6 +13,9 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5"
   },
+  "allowScripts": {
+    "esbuild": true
+  },
   "devDependencies": {
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
