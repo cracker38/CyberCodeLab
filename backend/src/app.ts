@@ -37,6 +37,9 @@ export function createApp() {
     }),
   );
 
+  app.get("/", (_req, res) => {
+    res.json({ ok: true, name: "CyberCode Lab API", health: "/api/health" });
+  });
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, name: "CyberCode Lab API" });
   });
