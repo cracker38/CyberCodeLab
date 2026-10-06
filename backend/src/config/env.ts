@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const backendRoot = path.resolve(here, "../..");
+export const backendRoot = path.resolve(here, "../..");
 dotenv.config({ path: path.resolve(backendRoot, "../.env") });
 dotenv.config({ path: path.resolve(backendRoot, ".env") });
 

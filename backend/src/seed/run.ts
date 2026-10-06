@@ -2,8 +2,6 @@ import { db, initSchema, nowIso } from "../config/db.js";
 import { hashPassword } from "../utils/crypto.js";
 import { id } from "../utils/ids.js";
 
-initSchema();
-
 function wipe(): void {
   const tables = [
     "audit_logs",
@@ -71,7 +69,8 @@ function insertQuiz(opts: {
   });
 }
 
-async function seed(): Promise<void> {
+export async function seed(): Promise<void> {
+  initSchema();
   wipe();
   const ts = nowIso();
 
@@ -955,7 +954,22 @@ Checklist for a VM you created. Never apply unsolicited changes to machines you 
   console.log("Learner: learner@cybercodelab.local / LearnLab!2026");
 }
 
-seed().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+export async function seedIfEmpty(): Promise<void> {
+  initSchema();
+  let count = 0;
+  try {
+    count = Number((db.prepare("SELECT COUNT(*) as c FROM users").get() as { c: unknown }).c);
+  } catch {
+    count = 0;
+  }
+  if (count > 0) return;
+  await seed();
+}
+
+const invokedDirectly = /seed[/\\]run\.(ts|js)$/.test(process.argv[1] ?? "");
+if (invokedDirectly) {
+  seed().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
