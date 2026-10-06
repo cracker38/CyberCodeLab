@@ -1,25 +1,27 @@
-import { Helmet } from "react-helmet-async";
+import { useEffect } from "react";
 
 export function Seo({
   title,
   description,
-  path = "/",
 }: {
   title: string;
   description: string;
   path?: string;
 }) {
-  const full = `${title} · CyberCode Lab`;
-  const url = `https://cybercodelab.example${path}`;
-  return (
-    <Helmet>
-      <title>{full}</title>
-      <meta name="description" content={description} />
-      <meta property="og:title" content={full} />
-      <meta property="og:description" content={description} />
-      <meta property="og:type" content="website" />
-      <meta property="og:url" content={url} />
-      <link rel="canonical" href={url} />
-    </Helmet>
-  );
+  useEffect(() => {
+    document.title = `${title} · CyberCode Lab`;
+    const set = (name: string, content: string, attr: "name" | "property" = "name") => {
+      let el = document.head.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, name);
+        document.head.appendChild(el);
+      }
+      el.content = content;
+    };
+    set("description", description);
+    set("og:title", `${title} · CyberCode Lab`, "property");
+    set("og:description", description, "property");
+  }, [title, description]);
+  return null;
 }
