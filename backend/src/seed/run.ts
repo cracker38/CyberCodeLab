@@ -77,16 +77,11 @@ export async function seed(): Promise<void> {
   db.prepare("INSERT INTO roles (id, name) VALUES (1, 'USER'), (2, 'INSTRUCTOR'), (3, 'ADMIN')").run();
 
   const adminId = id();
-  const instructorId = id();
   const learnerId = id();
   db.prepare(
     `INSERT INTO users (id, email, password_hash, full_name, role_id, email_verified, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
   ).run(adminId, "admin@cybercodelab.local", await hashPassword("AdminLab!2026"), "Amina Okonkwo", 3, ts, ts);
-  db.prepare(
-    `INSERT INTO users (id, email, password_hash, full_name, role_id, email_verified, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-  ).run(instructorId, "instructor@cybercodelab.local", await hashPassword("TeachLab!2026"), "Daniel Reyes", 2, ts, ts);
   db.prepare(
     `INSERT INTO users (id, email, password_hash, full_name, role_id, email_verified, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
@@ -950,7 +945,6 @@ Checklist for a VM you created. Never apply unsolicited changes to machines you 
 
   console.log("Seed complete.");
   console.log("Admin: admin@cybercodelab.local / AdminLab!2026");
-  console.log("Instructor: instructor@cybercodelab.local / TeachLab!2026");
   console.log("Learner: learner@cybercodelab.local / LearnLab!2026");
 }
 
@@ -964,6 +958,10 @@ export async function seedIfEmpty(): Promise<void> {
   }
   if (count > 0) return;
   await seed();
+}
+
+export function removeInstructorUser(): void {
+  db.prepare("DELETE FROM users WHERE email = ?").run("instructor@cybercodelab.local");
 }
 
 const invokedDirectly = /seed[/\\]run\.(ts|js)$/.test(process.argv[1] ?? "");

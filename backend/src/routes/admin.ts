@@ -11,7 +11,7 @@ import {
 } from "../validators/schemas.js";
 
 export const adminRouter = Router();
-adminRouter.use(requireAuth, requireRole("ADMIN", "INSTRUCTOR"));
+adminRouter.use(requireAuth, requireRole("ADMIN"));
 
 adminRouter.get("/stats", admin.adminStats);
 adminRouter.get("/users", requireRole("ADMIN"), admin.listUsers);

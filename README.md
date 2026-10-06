@@ -47,7 +47,6 @@ App: `http://localhost:5173`
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | `admin@cybercodelab.local` | `AdminLab!2026` |
-| Instructor | `instructor@cybercodelab.local` | `TeachLab!2026` |
 | Learner | `learner@cybercodelab.local` | `LearnLab!2026` |
 
 Change these passwords before any shared or production use.

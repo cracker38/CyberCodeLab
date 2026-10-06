@@ -17,7 +17,7 @@ export const listUsers = asyncHandler(async (_req: Request, res: Response) => {
 
 export const updateUserRole = asyncHandler(async (req: Request, res: Response) => {
   const roleName = String(req.body.role ?? "");
-  if (!["USER", "INSTRUCTOR", "ADMIN"].includes(roleName)) {
+  if (!["USER", "ADMIN"].includes(roleName)) {
     res.status(400).json({ error: "Invalid role." });
     return;
   }
