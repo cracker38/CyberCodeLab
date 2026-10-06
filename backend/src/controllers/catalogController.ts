@@ -192,3 +192,22 @@ export const announcements = asyncHandler(async (_req: Request, res: Response) =
     .all();
   res.json({ announcements: rows });
 });
+
+export const catalogHome = asyncHandler(async (_req: Request, res: Response) => {
+  const courses = db
+    .prepare(
+      "SELECT slug, title, subtitle, level, category, estimated_hours FROM courses WHERE published = 1 ORDER BY title LIMIT 6",
+    )
+    .all();
+  const labs = db
+    .prepare("SELECT slug, title, category, difficulty, description FROM labs WHERE published = 1 ORDER BY title LIMIT 4")
+    .all();
+  const projects = db
+    .prepare("SELECT slug, title, description, difficulty FROM projects WHERE published = 1 ORDER BY title LIMIT 3")
+    .all();
+  const videos = db.prepare("SELECT youtube_id, title, description FROM youtube_videos ORDER BY sort_order LIMIT 3").all();
+  const announcements = db
+    .prepare("SELECT title, body, created_at FROM announcements WHERE published = 1 ORDER BY created_at DESC LIMIT 2")
+    .all();
+  res.json({ courses, labs, projects, videos, announcements });
+});

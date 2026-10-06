@@ -1,16 +1,19 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Seo } from "../components/Seo";
+import { ProgressBar } from "../components/ui";
+import { api } from "../services/api";
 
-const steps = [
-  { done: false, title: "Cybersecurity Fundamentals", to: "/courses/cybersecurity-fundamentals" },
-  { done: false, title: "Networking Essentials", to: "/courses/networking-essentials" },
-  { done: false, title: "Linux for Security", to: "/courses/linux-for-security" },
-  { done: false, title: "Python for Cybersecurity", to: "/courses/python-for-cybersecurity" },
-  { done: false, title: "Web Security", to: "/courses/web-security" },
-  { done: false, title: "AI for Cybersecurity", to: "/courses/ai-for-cybersecurity" },
-];
+type Step = { slug: string; title: string; level: string; percent: number; status: string };
 
 export function LearnPage() {
+  const [steps, setSteps] = useState<Step[]>([]);
+  useEffect(() => {
+    api<{ steps: Step[] }>("/api/learn/path")
+      .then((d) => setSteps(d.steps))
+      .catch(() => setSteps([]));
+  }, []);
+
   return (
     <>
       <Seo
@@ -26,20 +29,29 @@ export function LearnPage() {
           already demonstrate.
         </p>
         <ol className="mt-10 space-y-4">
-          {steps.map((s, i) => (
-            <li key={s.to} className="flex gap-4 rounded-xl border border-line bg-ink-900 p-4">
+          {(steps.length
+            ? steps
+            : [
+                { slug: "cybersecurity-fundamentals", title: "Cybersecurity Fundamentals", level: "Beginner", percent: 0, status: "next" },
+                { slug: "networking-essentials", title: "Networking Essentials", level: "Beginner", percent: 0, status: "upcoming" },
+                { slug: "linux-for-security", title: "Linux for Security", level: "Beginner", percent: 0, status: "upcoming" },
+                { slug: "python-for-cybersecurity", title: "Python for Cybersecurity", level: "Intermediate", percent: 0, status: "upcoming" },
+                { slug: "web-security", title: "Web Security", level: "Intermediate", percent: 0, status: "upcoming" },
+                { slug: "ai-for-cybersecurity", title: "AI for Cybersecurity", level: "Intermediate", percent: 0, status: "upcoming" },
+              ]
+          ).map((s, i) => (
+            <li key={s.slug} className="surface flex gap-4 p-4">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line font-mono text-sm text-accent">
-                {i + 1}
+                {s.status === "completed" ? "✓" : i + 1}
               </span>
-              <div>
-                <Link to={s.to} className="font-medium text-white hover:text-accent">
-                  {s.title}
-                </Link>
-                {i < steps.length - 1 && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Then: {steps[i + 1].title}
-                  </p>
-                )}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Link to={`/courses/${s.slug}`} className="font-medium text-white hover:text-accent">
+                    {s.title}
+                  </Link>
+                  <span className="font-mono text-[11px] uppercase text-slate-500">{s.status.replace("_", " ")}</span>
+                </div>
+                {s.percent > 0 && <div className="mt-2"><ProgressBar percent={s.percent} /></div>}
               </div>
             </li>
           ))}

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { db, nowIso } from "../config/db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { id, parseJson } from "../utils/ids.js";
+import { bool, num } from "../utils/sql.js";
 
 function mapCourse(row: Record<string, unknown>) {
   return {
@@ -12,11 +13,11 @@ function mapCourse(row: Record<string, unknown>) {
     description: row.description,
     level: row.level,
     category: row.category,
-    estimatedHours: row.estimated_hours,
+    estimatedHours: num(row.estimated_hours),
     prerequisites: parseJson<string[]>(String(row.prerequisites ?? "[]"), []),
     nextCourseSlug: row.next_course_slug,
     learningObjectives: parseJson<string[]>(String(row.learning_objectives ?? "[]"), []),
-    published: Boolean(row.published),
+    published: bool(row.published),
   };
 }
 
@@ -33,7 +34,8 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
 export const getCourse = asyncHandler(async (req: Request, res: Response) => {
   const slug = String(req.params.slug);
   const course = db.prepare("SELECT * FROM courses WHERE slug = ?").get(slug) as Record<string, unknown> | undefined;
-  if (!course || (!course.published && req.user?.role === "USER")) {
+  const staff = req.user?.role === "ADMIN" || req.user?.role === "INSTRUCTOR";
+  if (!course || (!bool(course.published) && !staff)) {
     res.status(404).json({ error: "Course not found." });
     return;
   }
@@ -73,30 +75,41 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
   const totalLessons = lessons.length;
   const completed = completedLessonIds.length;
   const progress = totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
+  const continueLesson = lessons.find((l) => !completedLessonIds.includes(String(l.id)));
 
   const quiz = db.prepare("SELECT id, title, passing_score FROM quizzes WHERE course_id = ?").get(course.id) as
     | { id: string; title: string; passing_score: number }
     | undefined;
 
+  const mappedModules = modules.map((m) => ({
+    id: m.id,
+    title: m.title,
+    description: m.description,
+    lessons: lessons
+      .filter((l) => l.module_id === m.id)
+      .map((l) => ({
+        id: l.id,
+        slug: l.slug,
+        title: l.title,
+        durationMinutes: num(l.duration_minutes),
+        completed: completedLessonIds.includes(String(l.id)),
+      })),
+  }));
+
   res.json({
     course: mapCourse(course),
-    modules: modules.map((m) => ({
-      id: m.id,
-      title: m.title,
-      description: m.description,
-      lessons: lessons
-        .filter((l) => l.module_id === m.id)
-        .map((l) => ({
-          id: l.id,
-          slug: l.slug,
-          title: l.title,
-          durationMinutes: l.duration_minutes,
-          completed: completedLessonIds.includes(String(l.id)),
-        })),
-    })),
+    modules: mappedModules,
     enrolled,
     progress: { completed, total: totalLessons, percent: progress },
-    quiz,
+    continueLesson: continueLesson
+      ? { slug: continueLesson.slug, title: continueLesson.title }
+      : mappedModules.flatMap((m) => m.lessons)[0]
+        ? {
+            slug: mappedModules.flatMap((m) => m.lessons)[0].slug,
+            title: mappedModules.flatMap((m) => m.lessons)[0].title,
+          }
+        : null,
+    quiz: quiz ? { id: quiz.id, title: quiz.title, passingScore: num(quiz.passing_score) } : null,
   });
 });
 
@@ -153,13 +166,13 @@ export const getLesson = asyncHandler(async (req: Request, res: Response) => {
       codeExample: lesson.code_example,
       exercise: lesson.exercise,
       videoUrl: lesson.video_url,
-      durationMinutes: lesson.duration_minutes,
+      durationMinutes: num(lesson.duration_minutes),
       moduleTitle: lesson.module_title,
       completed,
     },
     prev,
     next,
-    quiz,
+    quiz: quiz ? { id: quiz.id, title: quiz.title, passingScore: num(quiz.passing_score) } : null,
   });
 });
 
@@ -206,10 +219,25 @@ export const completeLesson = asyncHandler(async (req: Request, res: Response) =
         (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN modules m ON m.id = l.module_id
          WHERE m.course_id = ? AND lp.user_id = ? AND lp.completed = 1) as done`,
     )
-    .get(course.id, course.id, req.user!.id) as { total: number; done: number };
+    .get(course.id, course.id, req.user!.id) as { total: unknown; done: unknown };
+
+  const total = num(totals.total);
+  const done = num(totals.done);
+
+  const nextRow = db
+    .prepare(
+      `SELECT l.slug, l.title FROM lessons l
+       JOIN modules m ON m.id = l.module_id
+       WHERE m.course_id = ?
+       AND l.id NOT IN (
+         SELECT lesson_id FROM lesson_progress WHERE user_id = ? AND completed = 1
+       )
+       ORDER BY m.sort_order, l.sort_order LIMIT 1`,
+    )
+    .get(course.id, req.user!.id) as { slug: string; title: string } | undefined;
 
   let certificateId: string | null = null;
-  if (totals.total > 0 && totals.done >= totals.total) {
+  if (total > 0 && done >= total) {
     db.prepare("UPDATE enrollments SET completed_at = ? WHERE user_id = ? AND course_id = ? AND completed_at IS NULL").run(
       nowIso(),
       req.user!.id,
@@ -229,5 +257,10 @@ export const completeLesson = asyncHandler(async (req: Request, res: Response) =
       );
     }
   }
-  res.json({ ok: true, certificateId });
+  res.json({
+    ok: true,
+    certificateId,
+    nextLesson: nextRow ?? null,
+    progress: { completed: done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) },
+  });
 });

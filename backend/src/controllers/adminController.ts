@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { db, nowIso } from "../config/db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { id } from "../utils/ids.js";
+import { num } from "../utils/sql.js";
 
 export const listUsers = asyncHandler(async (_req: Request, res: Response) => {
   const users = db
@@ -172,11 +173,12 @@ export const createProject = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const adminStats = asyncHandler(async (_req: Request, res: Response) => {
-  const users = (db.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number }).c;
-  const courses = (db.prepare("SELECT COUNT(*) as c FROM courses").get() as { c: number }).c;
-  const labs = (db.prepare("SELECT COUNT(*) as c FROM labs").get() as { c: number }).c;
-  const certificates = (db.prepare("SELECT COUNT(*) as c FROM certificates").get() as { c: number }).c;
-  res.json({ users, courses, labs, certificates });
+  res.json({
+    users: num((db.prepare("SELECT COUNT(*) as c FROM users").get() as { c: unknown }).c),
+    courses: num((db.prepare("SELECT COUNT(*) as c FROM courses").get() as { c: unknown }).c),
+    labs: num((db.prepare("SELECT COUNT(*) as c FROM labs").get() as { c: unknown }).c),
+    certificates: num((db.prepare("SELECT COUNT(*) as c FROM certificates").get() as { c: unknown }).c),
+  });
 });
 
 export const listCertificates = asyncHandler(async (_req: Request, res: Response) => {

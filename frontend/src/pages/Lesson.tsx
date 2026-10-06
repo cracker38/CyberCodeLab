@@ -1,35 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Markdown } from "../components/Markdown";
 import { Seo } from "../components/Seo";
 import { useAuth } from "../hooks/useAuth";
 import { api } from "../services/api";
-
-function renderContent(text: string) {
-  const blocks = text.split("\n\n");
-  return blocks.map((block, i) => {
-    if (block.startsWith("## ")) return <h2 key={i}>{block.slice(3)}</h2>;
-    if (block.startsWith("- ")) {
-      return (
-        <ul key={i}>
-          {block.split("\n").map((line) => (
-            <li key={line}>{line.replace(/^- /, "")}</li>
-          ))}
-        </ul>
-      );
-    }
-    if (/^\d+\. /.test(block)) {
-      return (
-        <ol key={i}>
-          {block.split("\n").map((line) => (
-            <li key={line}>{line.replace(/^\d+\. /, "")}</li>
-          ))}
-        </ol>
-      );
-    }
-    const html = block.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
-    return <p key={i} dangerouslySetInnerHTML={{ __html: html }} />;
-  });
-}
 
 type LessonPayload = {
   course: { slug: string; title: string };
@@ -46,7 +20,7 @@ type LessonPayload = {
   };
   prev: { slug: string; title: string } | null;
   next: { slug: string; title: string } | null;
-  quiz?: { id: string; title: string };
+  quiz?: { id: string; title: string } | null;
 };
 
 export function LessonPage() {
@@ -55,16 +29,17 @@ export function LessonPage() {
   const [data, setData] = useState<LessonPayload | null>(null);
   const [error, setError] = useState("");
   const [cert, setCert] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     api<LessonPayload>(`/api/courses/${slug}/lessons/${lessonSlug}`)
       .then(setData)
       .catch((e: Error) => setError(e.message));
-  };
+  }, [slug, lessonSlug]);
 
   useEffect(() => {
     load();
-  }, [slug, lessonSlug]);
+  }, [load]);
 
   if (error) return <p className="mx-auto max-w-3xl px-4 py-16 text-red-300">{error}</p>;
   if (!data) return <p className="mx-auto max-w-3xl px-4 py-16 text-slate-400">Loading lesson…</p>;
@@ -81,7 +56,9 @@ export function LessonPage() {
           · {lesson.moduleTitle}
         </p>
         <h1 className="mt-2 text-3xl font-semibold">{lesson.title}</h1>
-        <div className="prose-lesson mt-8 space-y-3">{renderContent(lesson.content)}</div>
+        <div className="prose-lesson mt-8 space-y-3">
+          <Markdown text={lesson.content} />
+        </div>
         {lesson.codeExample && (
           <pre className="mt-8 overflow-x-auto rounded-xl border border-line bg-ink-900 p-4 font-mono text-sm text-teal-100">
             <code>{lesson.codeExample}</code>
@@ -101,13 +78,19 @@ export function LessonPage() {
         {user && !lesson.completed && (
           <div className="mt-8">
             <button
-              className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-ink-950"
+              className="btn-primary"
+              disabled={busy}
               onClick={async () => {
-                const r = await api<{ certificateId?: string | null }>(`/api/lessons/${lesson.id}/complete`, {
-                  method: "POST",
-                });
-                if (r.certificateId) setCert(r.certificateId);
-                load();
+                setBusy(true);
+                try {
+                  const r = await api<{ certificateId?: string | null }>(`/api/lessons/${lesson.id}/complete`, {
+                    method: "POST",
+                  });
+                  if (r.certificateId) setCert(r.certificateId);
+                  load();
+                } finally {
+                  setBusy(false);
+                }
               }}
             >
               Mark complete

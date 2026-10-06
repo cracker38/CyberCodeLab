@@ -6,8 +6,14 @@ export function ProgressBar({ percent, label }: { percent: number; label?: strin
   return (
     <div>
       {label && <p className="mb-1 text-xs text-slate-400">{label}</p>}
-      <div className="h-2 overflow-hidden rounded-full bg-ink-700" role="progressbar" aria-valuenow={p} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full rounded-full bg-accent" style={{ width: `${p}%` }} />
+      <div
+        className="h-2 overflow-hidden rounded-full bg-ink-700"
+        role="progressbar"
+        aria-valuenow={p}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-accent" style={{ width: `${p}%` }} />
       </div>
     </div>
   );
@@ -31,10 +37,7 @@ export function CardLink({
   meta?: string;
 }) {
   return (
-    <Link
-      to={to}
-      className="block rounded-xl border border-line bg-ink-900 p-5 shadow-card transition hover:border-accent/40"
-    >
+    <Link to={to} className="surface block p-5 transition hover:border-accent/40">
       {meta && <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-accent">{meta}</p>}
       <h3 className="text-lg font-semibold text-white">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-slate-400">{children}</p>
@@ -68,3 +71,12 @@ export function Field({
 
 export const inputClass =
   "w-full rounded-md border border-line bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-slate-600";
+
+export function Empty({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="surface px-5 py-8 text-center">
+      <p className="font-medium text-white">{title}</p>
+      {hint && <p className="mt-2 text-sm text-slate-400">{hint}</p>}
+    </div>
+  );
+}
