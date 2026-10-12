@@ -1,35 +1,27 @@
 import type { Request, Response } from "express";
 import { db, nowIso } from "../config/db.js";
+import { env } from "../config/env.js";
+import { OFFICIAL_YOUTUBE_VIDEOS, syncOfficialYoutubeVideos, youtubeChannelVideosUrl } from "../config/youtube.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { id, parseJson } from "../utils/ids.js";
 import { isYouTubeId, likeContains } from "../utils/sql.js";
 
-const VIDEO_LINKS: Record<string, { courseSlug?: string; labSlug?: string }> = {
-  "Welcome to CyberCode Lab": { courseSlug: "cybersecurity-fundamentals" },
-  "TCP/IP without the intimidation": { courseSlug: "networking-essentials", labSlug: "dns-analysis-lab" },
-  "Your first defensive Python script": { courseSlug: "python-for-cybersecurity", labSlug: "hashing-demo-lab" },
-  "Linux permissions in 12 minutes": { courseSlug: "linux-for-security", labSlug: "file-integrity-lab" },
-};
-
 function mapVideo(row: Record<string, unknown>) {
   const youtubeId = String(row.youtube_id);
-  const title = String(row.title);
+  const official = OFFICIAL_YOUTUBE_VIDEOS.find((v) => v.youtubeId === youtubeId);
   const embeddable = isYouTubeId(youtubeId);
-  const links = VIDEO_LINKS[title] ?? {};
   return {
     id: row.id,
     youtubeId,
-    title,
-    description: row.description,
+    title: official?.title ?? String(row.title),
+    description: official?.description ?? row.description,
     publishedAt: row.published_at,
     sortOrder: row.sort_order,
     embeddable,
-    watchUrl: embeddable
-      ? `https://www.youtube.com/watch?v=${youtubeId}`
-      : process.env.YOUTUBE_CHANNEL_URL ?? "https://www.youtube.com/@CyberCodeLab",
+    watchUrl: embeddable ? `https://youtu.be/${youtubeId}` : youtubeChannelVideosUrl(),
     thumbnailUrl: embeddable ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : null,
-    relatedCourseSlug: links.courseSlug ?? null,
-    relatedLabSlug: links.labSlug ?? null,
+    relatedCourseSlug: official?.relatedCourseSlug ?? null,
+    relatedLabSlug: official?.relatedLabSlug ?? null,
   };
 }
 
@@ -287,10 +279,12 @@ export const getResource = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const youtube = asyncHandler(async (_req: Request, res: Response) => {
+  syncOfficialYoutubeVideos();
   const videos = db.prepare("SELECT * FROM youtube_videos ORDER BY sort_order").all() as Record<string, unknown>[];
   res.json({
-    channelUrl: process.env.YOUTUBE_CHANNEL_URL ?? "https://www.youtube.com/@CyberCodeLab",
-    channelName: process.env.YOUTUBE_CHANNEL_NAME ?? "CyberCode Lab",
+    channelUrl: youtubeChannelVideosUrl(),
+    channelName: env.youtubeChannelName,
+    previewSeconds: env.youtubePreviewSeconds,
     videos: videos.map(mapVideo),
   });
 });
@@ -303,6 +297,7 @@ export const announcements = asyncHandler(async (_req: Request, res: Response) =
 });
 
 export const catalogHome = asyncHandler(async (_req: Request, res: Response) => {
+  syncOfficialYoutubeVideos();
   const courses = db
     .prepare(
       "SELECT slug, title, subtitle, level, category, estimated_hours FROM courses WHERE published = 1 ORDER BY title LIMIT 6",

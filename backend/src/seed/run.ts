@@ -917,10 +917,11 @@ Checklist for a VM you created. Never apply unsolicited changes to machines you 
   }
 
   const videos = [
-    ["dQw4w9wg", "Welcome to CyberCode Lab", "How the Learn → Code → Practice → Secure path works."],
-    ["net101cc", "TCP/IP without the intimidation", "A practical mental model for beginners."],
-    ["pysec01c", "Your first defensive Python script", "Hash a file you own and explain the output."],
-    ["linux01c", "Linux permissions in 12 minutes", "Owner, group, mode — on a VM you created."],
+    [
+      "a23tvL8ytXs",
+      "Cybersecurity Roadmap for Beginners in 2026 | Roadmap ya Cybersecurity ku Batangiye",
+      "Official CyberCode Lab video. Watch a short preview here, then continue on the channel for the full lesson.",
+    ],
   ];
   videos.forEach((v, i) => {
     db.prepare(

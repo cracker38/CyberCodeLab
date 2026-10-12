@@ -1,97 +1,101 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Seo } from "../components/Seo";
+import { YouTubePreview } from "../components/YouTubePreview";
 import { AsyncState, PageHeader } from "../components/ui";
 import { api } from "../services/api";
 import type { VideoCard } from "../types";
 
+const CHANNEL_VIDEOS_URL = "https://www.youtube.com/@CyberCodeLab/videos";
+const OFFICIAL_VIDEO_ID = "a23tvL8ytXs";
+
+const FALLBACK_VIDEO: VideoCard = {
+  youtubeId: OFFICIAL_VIDEO_ID,
+  title: "Cybersecurity Roadmap for Beginners in 2026 | Roadmap ya Cybersecurity ku Batangiye",
+  description:
+    "Official CyberCode Lab video. Watch a short preview here, then continue on the channel for the full lesson.",
+  embeddable: true,
+  watchUrl: `https://youtu.be/${OFFICIAL_VIDEO_ID}`,
+  thumbnailUrl: `https://i.ytimg.com/vi/${OFFICIAL_VIDEO_ID}/hqdefault.jpg`,
+  relatedCourseSlug: "cybersecurity-fundamentals",
+};
+
 export function YouTubePage() {
-  const [channelUrl, setChannelUrl] = useState("");
+  const [channelUrl, setChannelUrl] = useState(CHANNEL_VIDEOS_URL);
   const [channelName, setChannelName] = useState("CyberCode Lab");
+  const [previewSeconds, setPreviewSeconds] = useState(45);
   const [videos, setVideos] = useState<VideoCard[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<{ channelUrl: string; channelName: string; videos: VideoCard[] }>("/api/youtube")
+    api<{
+      channelUrl: string;
+      channelName: string;
+      previewSeconds?: number;
+      videos: VideoCard[];
+    }>("/api/youtube")
       .then((d) => {
-        setChannelUrl(d.channelUrl);
-        setChannelName(d.channelName);
-        setVideos(d.videos);
+        const official = (d.videos ?? []).filter((v) => v.youtubeId === OFFICIAL_VIDEO_ID && v.embeddable);
+        setVideos(official.length > 0 ? official : [FALLBACK_VIDEO]);
+        setChannelUrl(d.channelUrl?.includes("youtube.com") ? d.channelUrl : CHANNEL_VIDEOS_URL);
+        setChannelName(d.channelName || "CyberCode Lab");
+        setPreviewSeconds(d.previewSeconds && d.previewSeconds >= 15 ? d.previewSeconds : 45);
         setError("");
       })
-      .catch((e: Error) => setError(e.message))
+      .catch(() => {
+        setVideos([FALLBACK_VIDEO]);
+        setChannelUrl(CHANNEL_VIDEOS_URL);
+        setError("");
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const video = videos[0];
 
   return (
     <>
       <Seo
         title="YouTube"
-        description="Latest from CyberCode Lab — cybersecurity education videos."
+        description="Watch CyberCode Lab on YouTube — cybersecurity education from the official channel."
         path="/youtube"
       />
       <div className="page-wrap py-12">
         <PageHeader kicker="Learn · YouTube" title={`Latest from ${channelName}`}>
-          <p>Watch the concept, then return here for the matching course or lab. Video is the briefing; practice is the work.</p>
+          <p>
+            Only videos from{" "}
+            <a className="text-accent" href={CHANNEL_VIDEOS_URL} target="_blank" rel="noreferrer">
+              @CyberCodeLab
+            </a>
+            . Play a short on-site preview, then you are sent to the channel for the full video.
+          </p>
         </PageHeader>
-        {channelUrl && (
-          <a
-            href={channelUrl}
-            className="btn-primary mt-6"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Subscribe on YouTube
-          </a>
-        )}
-        <AsyncState
-          loading={loading}
-          error={error}
-          hasItems={videos.length > 0}
-          empty="No videos in the catalog yet"
-        >
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {videos.map((v) => (
-              <article key={v.youtubeId} className="overflow-hidden rounded-xl border border-line bg-ink-900 shadow-card">
-                {v.embeddable ? (
-                  <iframe
-                    title={v.title}
-                    className="aspect-video w-full"
-                    src={`https://www.youtube-nocookie.com/embed/${v.youtubeId}`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="flex aspect-video flex-col items-center justify-center gap-2 bg-ink-800 px-6 text-center">
-                    <p className="font-mono text-xs uppercase tracking-wider text-accent">Watch on channel</p>
-                    <p className="text-sm text-slate-400">
-                      This catalog item points at {channelName}. Open YouTube for the full video.
-                    </p>
-                  </div>
+        <a href={channelUrl} className="btn-primary mt-6" target="_blank" rel="noreferrer">
+          Open the channel
+        </a>
+        <AsyncState loading={loading} error={error} hasItems={Boolean(video)} empty="No official channel videos yet">
+          {video && (
+            <article className="mx-auto mt-8 max-w-4xl">
+              <YouTubePreview
+                videoId={video.youtubeId}
+                title={video.title}
+                previewSeconds={previewSeconds}
+                channelUrl={channelUrl}
+              />
+              <h2 className="mt-5 text-xl font-semibold">{video.title}</h2>
+              <p className="mt-2 text-sm text-slate-400">{video.description}</p>
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                <a className="text-accent" href={video.watchUrl} target="_blank" rel="noreferrer">
+                  Watch the full video on YouTube
+                </a>
+                {video.relatedCourseSlug && (
+                  <Link className="text-slate-300 hover:text-accent" to={`/courses/${video.relatedCourseSlug}`}>
+                    Related course
+                  </Link>
                 )}
-                <div className="p-5">
-                  <h2 className="font-semibold">{v.title}</h2>
-                  <p className="mt-2 text-sm text-slate-400">{v.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                    <a className="text-accent" href={v.watchUrl} target="_blank" rel="noreferrer">
-                      Watch on YouTube
-                    </a>
-                    {v.relatedCourseSlug && (
-                      <Link className="text-slate-300 hover:text-accent" to={`/courses/${v.relatedCourseSlug}`}>
-                        Related course
-                      </Link>
-                    )}
-                    {v.relatedLabSlug && (
-                      <Link className="text-slate-300 hover:text-accent" to={`/labs/${v.relatedLabSlug}`}>
-                        Practice lab
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+              </div>
+            </article>
+          )}
         </AsyncState>
       </div>
     </>

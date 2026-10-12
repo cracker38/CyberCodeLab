@@ -35,5 +35,6 @@ export const env = {
   cookieName: process.env.COOKIE_NAME ?? "ccl_session",
   youtubeChannelUrl: process.env.YOUTUBE_CHANNEL_URL ?? "https://www.youtube.com/@CyberCodeLab",
   youtubeChannelName: process.env.YOUTUBE_CHANNEL_NAME ?? "CyberCode Lab",
+  youtubePreviewSeconds: Math.max(15, Number(process.env.YOUTUBE_PREVIEW_SECONDS ?? 45) || 45),
   isProd: (process.env.NODE_ENV ?? "development") === "production",
 };
