@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Markdown } from "../components/Markdown";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
 import { api } from "../services/api";
 
@@ -28,6 +29,7 @@ export function ResourceDetailPage() {
     <>
       <Seo title={item.title} description={item.summary} path={`/resources/${item.slug}`} />
       <article className="mx-auto max-w-3xl px-4 py-12">
+        <Breadcrumbs items={[{ to: "/resources", label: "Resources" }, { label: item.title }]} />
         <p className="font-mono text-xs uppercase text-accent">
           {item.type} · {item.category}
         </p>

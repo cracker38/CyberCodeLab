@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
 import { Badge, Notice, ProgressBar } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -66,6 +67,7 @@ export function CourseDetailPage() {
     <>
       <Seo title={course.title} description={course.description} path={`/courses/${course.slug}`} />
       <div className="mx-auto max-w-3xl px-4 py-12">
+        <Breadcrumbs items={[{ to: "/courses", label: "Courses" }, { label: course.title }]} />
         <p className="font-mono text-xs uppercase tracking-widest text-accent">{course.category}</p>
         <h1 className="mt-2 text-3xl font-semibold">{course.title}</h1>
         <p className="mt-3 text-slate-400">{course.description}</p>

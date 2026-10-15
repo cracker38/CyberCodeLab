@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Markdown } from "../components/Markdown";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
 import { Badge, Notice } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -48,6 +49,7 @@ export function LabDetailPage() {
     <>
       <Seo title={lab.title} description={lab.description} path={`/labs/${lab.slug}`} />
       <div className="mx-auto max-w-3xl px-4 py-12">
+        <Breadcrumbs items={[{ to: "/labs", label: "Labs" }, { label: lab.title }]} />
         <p className="font-mono text-xs text-accent">{lab.category}</p>
         <h1 className="mt-2 text-3xl font-semibold">{lab.title}</h1>
         <div className="mt-3">

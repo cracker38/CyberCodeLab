@@ -44,7 +44,7 @@ export function CoursesPage() {
             recommended order unless you already have that skill.
           </p>
         </PageHeader>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="surface mt-8 grid gap-4 p-4 md:grid-cols-3">
           <Field label="Search">
             <input className={inputClass} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Title or topic" />
           </Field>

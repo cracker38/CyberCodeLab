@@ -39,10 +39,13 @@ export function CardLink({
   footer?: ReactNode;
 }) {
   return (
-    <Link to={to} className="surface block p-5 transition hover:border-accent/40">
+    <Link
+      to={to}
+      className="surface block p-5 transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_12px_40px_rgba(0,0,0,0.28)]"
+    >
       {meta && <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-accent">{meta}</p>}
       <h3 className="text-lg font-semibold text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-slate-400">{children}</p>
+      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-400">{children}</p>
       {footer}
     </Link>
   );
@@ -81,7 +84,16 @@ export function AsyncState({
   hasItems: boolean;
   children: ReactNode;
 }) {
-  if (loading) return <p className="mt-8 text-slate-400">Loading…</p>;
+  if (loading) {
+    return (
+      <div className="mt-8 grid gap-4 md:grid-cols-2" aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading</span>
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="skeleton h-36" />
+        ))}
+      </div>
+    );
+  }
   if (error) return <p className="mt-8 text-red-300">{error}</p>;
   if (!hasItems) return <div className="mt-8"><Empty title={empty} hint={emptyHint} /></div>;
   return <>{children}</>;
@@ -112,7 +124,7 @@ export function Field({
 }
 
 export const inputClass =
-  "w-full rounded-md border border-line bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-slate-600";
+  "w-full rounded-md border border-line bg-ink-950 px-3 py-2.5 text-sm text-white placeholder:text-slate-600 transition focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/20";
 
 export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (

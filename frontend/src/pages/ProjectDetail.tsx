@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Markdown } from "../components/Markdown";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
 import { Badge, Notice } from "../components/ui";
 import { api } from "../services/api";
@@ -37,6 +38,7 @@ export function ProjectDetailPage() {
     <>
       <Seo title={p.title} description={p.description} path={`/projects/${p.slug}`} />
       <div className="mx-auto max-w-3xl px-4 py-12">
+        <Breadcrumbs items={[{ to: "/projects", label: "Projects" }, { label: p.title }]} />
         <h1 className="text-3xl font-semibold">{p.title}</h1>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge>{p.difficulty}</Badge>
