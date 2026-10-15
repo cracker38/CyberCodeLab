@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Seo } from "../components/Seo";
 import { Field, inputClass } from "../components/ui";
@@ -14,7 +14,7 @@ function AuthShell({
 }: {
   title: string;
   description?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="page-wrap flex justify-center py-16">

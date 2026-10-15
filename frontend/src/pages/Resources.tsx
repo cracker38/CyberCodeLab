@@ -39,7 +39,7 @@ export function ResourcesPage() {
         <PageHeader kicker="Learn · Resources" title="Notes you can keep open while you study">
           <p>Roadmaps, cheat sheets, glossaries, and tool lists — the reference layer around courses and labs.</p>
         </PageHeader>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="surface mt-8 grid gap-4 p-4 md:grid-cols-3">
           <Field label="Search">
             <input className={inputClass} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search titles and notes" />
           </Field>

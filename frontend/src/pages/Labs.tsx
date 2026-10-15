@@ -49,7 +49,7 @@ export function LabsPage() {
         <div className="mt-6 max-w-2xl">
           <Notice>Educational / Authorized Environment Only</Notice>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="surface mt-8 grid gap-4 p-4 md:grid-cols-3">
           <Field label="Search">
             <input className={inputClass} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Lab title or skill" />
           </Field>

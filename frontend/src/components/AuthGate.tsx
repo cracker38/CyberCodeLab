@@ -31,7 +31,7 @@ export function AuthGate({
           This URL does not change. Sign in here to continue — you will not be sent to another route.
         </p>
         <form
-          className="mt-8 space-y-4"
+          className="surface mt-8 space-y-4 p-5"
           onSubmit={async (e) => {
             e.preventDefault();
             setError("");

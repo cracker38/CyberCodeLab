@@ -50,7 +50,7 @@ export function CourseDetailPage() {
 
   const goLearn = async () => {
     if (!user) {
-      navigate("/signin");
+      navigate(`/signin?next=${encodeURIComponent(`/courses/${course.slug}`)}`);
       return;
     }
     setBusy(true);

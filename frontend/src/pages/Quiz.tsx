@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
 import { ProgressBar } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -77,6 +78,7 @@ export function QuizPage() {
     <>
       <Seo title={data.quiz.title} description="Assessment" path={`/quizzes/${quizId}`} />
       <div className="mx-auto max-w-2xl px-4 py-12">
+        <Breadcrumbs items={[{ to: "/dashboard", label: "Dashboard" }, { label: data.quiz.title }]} />
         <h1 className="text-2xl font-semibold">{data.quiz.title}</h1>
         <p className="mt-1 text-sm text-slate-500">Passing score {data.quiz.passingScore}%</p>
         {total > 0 && !result && <div className="mt-4"><ProgressBar percent={Math.round(((index + 1) / total) * 100)} /></div>}

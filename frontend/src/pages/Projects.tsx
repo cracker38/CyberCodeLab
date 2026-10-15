@@ -37,7 +37,7 @@ export function ProjectsPage() {
             can talk through in an interview.
           </p>
         </PageHeader>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="surface mt-8 grid gap-4 p-4 md:grid-cols-2">
           <Field label="Search">
             <input className={inputClass} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Skill or technology" />
           </Field>

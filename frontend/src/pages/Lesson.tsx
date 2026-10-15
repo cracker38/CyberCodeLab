@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Markdown } from "../components/Markdown";
 import { Seo } from "../components/Seo";
 import { useAuth } from "../hooks/useAuth";
@@ -49,12 +50,14 @@ export function LessonPage() {
     <>
       <Seo title={lesson.title} description={course.title} path={`/courses/${course.slug}/lessons/${lesson.slug}`} />
       <article className="mx-auto max-w-3xl px-4 py-12">
-        <p className="text-sm text-slate-500">
-          <Link to={`/courses/${course.slug}`} className="hover:text-accent">
-            {course.title}
-          </Link>{" "}
-          · {lesson.moduleTitle}
-        </p>
+        <Breadcrumbs
+          items={[
+            { to: "/courses", label: "Courses" },
+            { to: `/courses/${course.slug}`, label: course.title },
+            { label: lesson.title },
+          ]}
+        />
+        <p className="text-sm text-slate-500">{lesson.moduleTitle}</p>
         <h1 className="mt-2 text-3xl font-semibold">{lesson.title}</h1>
         <div className="prose-lesson mt-8 space-y-3">
           <Markdown text={lesson.content} />
