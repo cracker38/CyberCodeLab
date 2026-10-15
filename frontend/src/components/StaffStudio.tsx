@@ -31,6 +31,10 @@ export function StaffContentStudio() {
 
   return (
     <div className="space-y-6">
+      <StaffNotice>
+        YouTube on the public site is locked to the official @CyberCodeLab channel. Placeholder or third-party videos
+        are removed automatically.
+      </StaffNotice>
       {(msg || error) && (error ? <p className="text-sm text-red-300">{error}</p> : <StaffNotice>{msg}</StaffNotice>)}
       <div className="grid gap-6 xl:grid-cols-2">
         <form

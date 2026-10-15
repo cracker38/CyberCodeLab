@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Seo } from "../components/Seo";
 import { CardLink } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
+import { CHANNEL_VIDEOS_URL, OFFICIAL_VIDEO } from "../lib/youtube";
 import { api } from "../services/api";
 
 type HomeData = {
@@ -148,14 +149,17 @@ export function HomePage() {
             <h3 className="text-lg font-semibold">Latest from CyberCode Lab</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-400">Watch, then practice in a lab you control.</p>
             <div className="mt-4 space-y-2">
-              {(data?.videos ?? []).map((v) => (
-                <p key={v.youtubeId} className="text-sm text-slate-300">
+              {(data?.videos?.length ? data.videos : [OFFICIAL_VIDEO]).slice(0, 1).map((v) => (
+                <Link key={v.youtubeId} to="/youtube" className="block text-sm text-slate-300 hover:text-accent">
                   {v.title}
-                </p>
+                </Link>
               ))}
             </div>
+            <a href={CHANNEL_VIDEOS_URL} className="mt-4 mr-4 inline-block text-sm text-slate-400 hover:text-accent" target="_blank" rel="noreferrer">
+              Channel
+            </a>
             <Link to="/youtube" className="mt-4 inline-block text-sm text-accent">
-              YouTube →
+              Preview on site →
             </Link>
           </div>
         </div>

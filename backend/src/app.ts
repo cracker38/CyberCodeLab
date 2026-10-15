@@ -9,6 +9,16 @@ import { adminRouter } from "./routes/admin.js";
 import { apiRouter } from "./routes/api.js";
 import { authRouter } from "./routes/auth.js";
 
+function isAllowedOrigin(origin: string): boolean {
+  if (env.frontendOrigins.includes(origin)) return true;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    return host.endsWith(".vercel.app") && host.includes("cyber-code-lab");
+  } catch {
+    return false;
+  }
+}
+
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
@@ -28,7 +38,7 @@ export function createApp() {
           return;
         }
         const normalized = origin.replace(/\/$/, "");
-        callback(null, env.frontendOrigins.includes(normalized));
+        callback(null, isAllowedOrigin(normalized));
       },
       credentials: true,
     }),

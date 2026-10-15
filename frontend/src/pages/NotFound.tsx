@@ -9,9 +9,17 @@ export function NotFoundPage() {
         <p className="font-mono text-accent">404</p>
         <h1 className="mt-2 text-3xl font-semibold">Page Not Found</h1>
         <p className="mt-3 text-slate-400">The page you're looking for doesn't exist.</p>
-        <Link to="/" className="mt-8 inline-block rounded-md bg-accent px-4 py-2 text-sm font-semibold text-ink-950">
-          Return Home
-        </Link>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link to="/" className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-ink-950">
+            Return Home
+          </Link>
+          <Link to="/learn" className="rounded-md border border-line px-4 py-2 text-sm text-slate-200">
+            Learn hub
+          </Link>
+          <Link to="/courses" className="rounded-md border border-line px-4 py-2 text-sm text-slate-200">
+            Courses
+          </Link>
+        </div>
       </div>
     </>
   );

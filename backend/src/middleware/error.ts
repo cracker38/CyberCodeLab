@@ -8,6 +8,10 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   } else {
     console.error("Request failed");
   }
+  if (err instanceof SyntaxError || (typeof err === "object" && err && "type" in err && (err as { type?: string }).type === "entity.parse.failed")) {
+    res.status(400).json({ error: "Invalid request body." });
+    return;
+  }
   if (message.includes("UNIQUE constraint")) {
     res.status(409).json({ error: "That record already exists." });
     return;
