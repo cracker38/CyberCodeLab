@@ -6,6 +6,7 @@ import {
   announcementSchema,
   courseCreateSchema,
   labCreateSchema,
+  professionalExamUpdateSchema,
   projectCreateSchema,
   quizCreateSchema,
   resourceCreateSchema,
@@ -21,6 +22,9 @@ adminRouter.get("/stats", staff, admin.adminStats);
 adminRouter.get("/users", adminOnly, admin.listUsers);
 adminRouter.patch("/users/:id/role", adminOnly, admin.updateUserRole);
 adminRouter.get("/certificates", adminOnly, admin.listCertificates);
+adminRouter.get("/professional-exams", adminOnly, admin.listProfessionalExams);
+adminRouter.get("/professional-exams/:quizId", adminOnly, admin.getProfessionalExam);
+adminRouter.put("/professional-exams/:quizId", adminOnly, validate(professionalExamUpdateSchema), admin.updateProfessionalExam);
 adminRouter.post("/courses", staff, validate(courseCreateSchema), admin.createCourse);
 adminRouter.post("/labs", staff, validate(labCreateSchema), admin.createLab);
 adminRouter.post("/projects", staff, validate(projectCreateSchema), admin.createProject);

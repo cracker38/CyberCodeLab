@@ -313,8 +313,8 @@ const courses: ExpandedCourse[] = [...specialistCourses, ...penetrationTestingCo
 
 function syncProfessionalExam(courseId: string, exam: ProfessionalLevelExam): void {
   const existingExam = db
-    .prepare("SELECT id FROM quizzes WHERE course_id = ? AND title = ?")
-    .get(courseId, exam.title) as { id: string } | undefined;
+    .prepare("SELECT id FROM quizzes WHERE course_id = ? AND title LIKE ? LIMIT 1")
+    .get(courseId, `${exam.title.split(":", 1)[0]}:%`) as { id: string } | undefined;
   if (existingExam) return;
 
   const examLesson = db

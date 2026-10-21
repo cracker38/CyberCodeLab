@@ -66,6 +66,12 @@ export const quizCreateSchema = z.object({
   questions: z.array(quizQuestionCreateSchema).min(1).max(50),
 });
 
+export const professionalExamUpdateSchema = z.object({
+  title: z.string().min(3).max(160).trim(),
+  passingScore: z.number().int().min(1).max(100),
+  questions: z.array(quizQuestionCreateSchema).min(1).max(50),
+});
+
 const lessonCreateSchema = z.object({
   slug: z.string().min(3).max(80).regex(/^[a-z0-9-]+$/),
   title: z.string().min(3).max(160),

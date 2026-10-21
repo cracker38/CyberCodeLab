@@ -182,6 +182,106 @@ export const createQuiz = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ id: quizId, questionsCreated: body.questions.length });
 });
 
+const PROFESSIONAL_EXAM_TITLE = /^(Entry Exam|Level Exam):/;
+
+export const listProfessionalExams = asyncHandler(async (_req: Request, res: Response) => {
+  const exams = db.prepare(
+    `SELECT q.id, q.title, q.passing_score, c.title AS course_title, c.slug AS course_slug,
+       (SELECT COUNT(*) FROM questions question WHERE question.quiz_id = q.id) AS question_count
+     FROM quizzes q JOIN courses c ON c.id = q.course_id
+     WHERE q.title LIKE 'Entry Exam:%' OR q.title LIKE 'Level Exam:%'
+     ORDER BY c.slug, CASE WHEN q.title LIKE 'Entry Exam:%' THEN 0 ELSE 1 END`,
+  ).all();
+  res.json({ exams });
+});
+
+export const getProfessionalExam = asyncHandler(async (req: Request, res: Response) => {
+  const exam = db.prepare(
+    `SELECT q.id, q.title, q.passing_score, c.title AS course_title, c.slug AS course_slug
+     FROM quizzes q JOIN courses c ON c.id = q.course_id WHERE q.id = ?`,
+  ).get(req.params.quizId) as
+    | { id: string; title: string; passing_score: number; course_title: string; course_slug: string }
+    | undefined;
+  if (!exam || !PROFESSIONAL_EXAM_TITLE.test(exam.title)) {
+    res.status(404).json({ error: "Professional exam not found." });
+    return;
+  }
+  const questions = db.prepare(
+    "SELECT id, prompt, type, explanation FROM questions WHERE quiz_id = ? ORDER BY sort_order",
+  ).all(exam.id) as { id: string; prompt: string; type: "single" | "multiple"; explanation: string | null }[];
+  const answers = questions.length
+    ? db.prepare(
+        `SELECT question_id, label, is_correct FROM answers
+         WHERE question_id IN (${questions.map(() => "?").join(",")}) ORDER BY sort_order`,
+      ).all(...questions.map((question) => question.id)) as { question_id: string; label: string; is_correct: number }[]
+    : [];
+  res.json({
+    exam: {
+      ...exam,
+      questions: questions.map((question) => ({
+        prompt: question.prompt,
+        type: question.type,
+        explanation: question.explanation ?? "",
+        answers: answers
+          .filter((answer) => answer.question_id === question.id)
+          .map((answer) => ({ label: answer.label, correct: answer.is_correct === 1 })),
+      })),
+    },
+  });
+});
+
+export const updateProfessionalExam = asyncHandler(async (req: Request, res: Response) => {
+  const body = req.body as {
+    title: string;
+    passingScore: number;
+    questions: {
+      prompt: string;
+      type: "single" | "multiple";
+      explanation?: string;
+      answers: { label: string; correct: boolean }[];
+    }[];
+  };
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const exam = db.prepare("SELECT id, title FROM quizzes WHERE id = ?").get(req.params.quizId) as
+      | { id: string; title: string }
+      | undefined;
+    if (!exam || !PROFESSIONAL_EXAM_TITLE.test(exam.title)) {
+      db.exec("ROLLBACK");
+      res.status(404).json({ error: "Professional exam not found." });
+      return;
+    }
+    const currentKind = exam.title.startsWith("Entry Exam:") ? "Entry Exam:" : "Level Exam:";
+    if (!body.title.startsWith(currentKind)) {
+      db.exec("ROLLBACK");
+      res.status(400).json({ error: `Keep the exam title prefix "${currentKind}" so course progression remains intact.` });
+      return;
+    }
+
+    db.prepare("UPDATE quizzes SET title = ?, passing_score = ? WHERE id = ?")
+      .run(body.title, body.passingScore, exam.id);
+    db.prepare("DELETE FROM questions WHERE quiz_id = ?").run(exam.id);
+    const addQuestion = db.prepare(
+      "INSERT INTO questions (id, quiz_id, prompt, type, explanation, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
+    );
+    const addAnswer = db.prepare(
+      "INSERT INTO answers (id, question_id, label, is_correct, sort_order) VALUES (?, ?, ?, ?, ?)",
+    );
+    body.questions.forEach((question, questionIndex) => {
+      const questionId = id();
+      addQuestion.run(questionId, exam.id, question.prompt, question.type, question.explanation ?? null, questionIndex);
+      question.answers.forEach((answer, answerIndex) => {
+        addAnswer.run(id(), questionId, answer.label, answer.correct ? 1 : 0, answerIndex);
+      });
+    });
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+  res.json({ ok: true, questionsUpdated: body.questions.length });
+});
+
 export const createAnnouncement = asyncHandler(async (req: Request, res: Response) => {
   const { title, body, published } = req.body as { title: string; body: string; published?: boolean };
   const annId = id();

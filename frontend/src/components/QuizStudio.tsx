@@ -1,17 +1,17 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { Field, inputClass } from "./ui";
 import { ApiError, api } from "../services/api";
 
 type CourseOption = { id: string; title: string; slug: string; hasAssessment?: boolean };
-type AnswerDraft = { label: string; correct: boolean };
-type QuestionDraft = {
+export type AnswerDraft = { label: string; correct: boolean };
+export type QuestionDraft = {
   prompt: string;
   type: "single" | "multiple";
   explanation: string;
   answers: AnswerDraft[];
 };
 
-function newQuestion(): QuestionDraft {
+export function newQuestion(): QuestionDraft {
   return {
     prompt: "",
     type: "single",
@@ -21,6 +21,82 @@ function newQuestion(): QuestionDraft {
       { label: "", correct: false },
     ],
   };
+}
+
+export function QuestionEditor({
+  questions,
+  setQuestions,
+}: {
+  questions: QuestionDraft[];
+  setQuestions: Dispatch<SetStateAction<QuestionDraft[]>>;
+}) {
+  const updateQuestion = (questionIndex: number, patch: Partial<QuestionDraft>) => {
+    setQuestions((current) => current.map((question, index) => index === questionIndex ? { ...question, ...patch } : question));
+  };
+
+  const updateAnswer = (questionIndex: number, answerIndex: number, patch: Partial<AnswerDraft>) => {
+    setQuestions((current) => current.map((question, index) => index === questionIndex
+      ? { ...question, answers: question.answers.map((answer, optionIndex) => optionIndex === answerIndex ? { ...answer, ...patch } : answer) }
+      : question));
+  };
+
+  return (
+    <div className="space-y-4 border-t border-line pt-5">
+      {questions.map((question, questionIndex) => (
+        <section key={questionIndex} className="space-y-4 rounded-xl border border-line bg-ink-950/60 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="font-medium text-white">Question {questionIndex + 1}</h4>
+            {questions.length > 1 && <button type="button" className="text-xs text-slate-500 hover:text-red-300" onClick={() => setQuestions((current) => current.filter((_, index) => index !== questionIndex))}>Remove question</button>}
+          </div>
+          <Field label="Question prompt">
+            <textarea className={inputClass} value={question.prompt} onChange={(event) => updateQuestion(questionIndex, { prompt: event.target.value })} rows={2} required minLength={5} maxLength={1200} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Answer format">
+              <select className={inputClass} value={question.type} onChange={(event) => {
+                const type = event.target.value as QuestionDraft["type"];
+                const answers = type === "single"
+                  ? question.answers.map((answer, index) => ({ ...answer, correct: question.answers.some((item) => item.correct) ? index === question.answers.findIndex((item) => item.correct) : false }))
+                  : question.answers;
+                updateQuestion(questionIndex, { type, answers });
+              }}>
+                <option value="single">Choose one</option>
+                <option value="multiple">Choose all that apply</option>
+              </select>
+            </Field>
+            <Field label="Explanation after submission">
+              <input className={inputClass} value={question.explanation} onChange={(event) => updateQuestion(questionIndex, { explanation: event.target.value })} maxLength={2000} placeholder="Explain why the answer is correct." />
+            </Field>
+          </div>
+
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm text-slate-300">Answer choices <span className="text-xs text-slate-500">Select the correct {question.type === "multiple" ? "answers" : "answer"}.</span></legend>
+            {question.answers.map((answer, answerIndex) => (
+              <div key={answerIndex} className="flex items-center gap-3">
+                <input
+                  type={question.type === "multiple" ? "checkbox" : "radio"}
+                  name={`correct-answer-${questionIndex}`}
+                  aria-label={`Mark answer ${answerIndex + 1} correct`}
+                  checked={answer.correct}
+                  onChange={() => {
+                    if (question.type === "single") {
+                      updateQuestion(questionIndex, { answers: question.answers.map((item, index) => ({ ...item, correct: index === answerIndex })) });
+                    } else {
+                      updateAnswer(questionIndex, answerIndex, { correct: !answer.correct });
+                    }
+                  }}
+                />
+                <input className={inputClass} value={answer.label} onChange={(event) => updateAnswer(questionIndex, answerIndex, { label: event.target.value })} required minLength={1} maxLength={500} aria-label={`Answer choice ${answerIndex + 1}`} />
+                {question.answers.length > 2 && <button type="button" className="shrink-0 text-xs text-slate-500 hover:text-red-300" aria-label={`Remove answer ${answerIndex + 1}`} onClick={() => updateQuestion(questionIndex, { answers: question.answers.filter((_, index) => index !== answerIndex) })}>Remove</button>}
+              </div>
+            ))}
+            {question.answers.length < 8 && <button type="button" className="text-sm text-accent hover:text-teal-200" onClick={() => updateQuestion(questionIndex, { answers: [...question.answers, { label: "", correct: false }] })}>+ Add answer choice</button>}
+          </fieldset>
+        </section>
+      ))}
+      {questions.length < 50 && <button type="button" className="btn-ghost !px-3 !py-2 text-xs" onClick={() => setQuestions((current) => [...current, newQuestion()])}>Add question</button>}
+    </div>
+  );
 }
 
 export function QuizStudio({ catalogVersion }: { catalogVersion: number }) {
@@ -52,16 +128,6 @@ export function QuizStudio({ catalogVersion }: { catalogVersion: number }) {
       active = false;
     };
   }, [catalogVersion]);
-
-  const updateQuestion = (questionIndex: number, patch: Partial<QuestionDraft>) => {
-    setQuestions((current) => current.map((question, index) => index === questionIndex ? { ...question, ...patch } : question));
-  };
-
-  const updateAnswer = (questionIndex: number, answerIndex: number, patch: Partial<AnswerDraft>) => {
-    setQuestions((current) => current.map((question, index) => index === questionIndex
-      ? { ...question, answers: question.answers.map((answer, optionIndex) => optionIndex === answerIndex ? { ...answer, ...patch } : answer) }
-      : question));
-  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -123,61 +189,7 @@ export function QuizStudio({ catalogVersion }: { catalogVersion: number }) {
         </Field>
       </div>
 
-      <div className="space-y-4 border-t border-line pt-5">
-        {questions.map((question, questionIndex) => (
-          <section key={questionIndex} className="space-y-4 rounded-xl border border-line bg-ink-950/60 p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h4 className="font-medium text-white">Question {questionIndex + 1}</h4>
-              {questions.length > 1 && <button type="button" className="text-xs text-slate-500 hover:text-red-300" onClick={() => setQuestions((current) => current.filter((_, index) => index !== questionIndex))}>Remove question</button>}
-            </div>
-            <Field label="Question prompt">
-              <textarea className={inputClass} value={question.prompt} onChange={(event) => updateQuestion(questionIndex, { prompt: event.target.value })} rows={2} required minLength={5} maxLength={1200} />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Answer format">
-                <select className={inputClass} value={question.type} onChange={(event) => {
-                  const type = event.target.value as QuestionDraft["type"];
-                  const answers = type === "single"
-                    ? question.answers.map((answer, index) => ({ ...answer, correct: question.answers.some((item) => item.correct) ? index === question.answers.findIndex((item) => item.correct) : false }))
-                    : question.answers;
-                  updateQuestion(questionIndex, { type, answers });
-                }}>
-                  <option value="single">Choose one</option>
-                  <option value="multiple">Choose all that apply</option>
-                </select>
-              </Field>
-              <Field label="Explanation after submission">
-                <input className={inputClass} value={question.explanation} onChange={(event) => updateQuestion(questionIndex, { explanation: event.target.value })} maxLength={2000} placeholder="Explain why the answer is correct." />
-              </Field>
-            </div>
-
-            <fieldset className="space-y-2">
-              <legend className="mb-2 text-sm text-slate-300">Answer choices <span className="text-xs text-slate-500">Select the correct {question.type === "multiple" ? "answers" : "answer"}.</span></legend>
-              {question.answers.map((answer, answerIndex) => (
-                <div key={answerIndex} className="flex items-center gap-3">
-                  <input
-                    type={question.type === "multiple" ? "checkbox" : "radio"}
-                    name={`correct-answer-${questionIndex}`}
-                    aria-label={`Mark answer ${answerIndex + 1} correct`}
-                    checked={answer.correct}
-                    onChange={() => {
-                      if (question.type === "single") {
-                        updateQuestion(questionIndex, { answers: question.answers.map((item, index) => ({ ...item, correct: index === answerIndex })) });
-                      } else {
-                        updateAnswer(questionIndex, answerIndex, { correct: !answer.correct });
-                      }
-                    }}
-                  />
-                  <input className={inputClass} value={answer.label} onChange={(event) => updateAnswer(questionIndex, answerIndex, { label: event.target.value })} required minLength={1} maxLength={500} aria-label={`Answer choice ${answerIndex + 1}`} />
-                  {question.answers.length > 2 && <button type="button" className="shrink-0 text-xs text-slate-500 hover:text-red-300" aria-label={`Remove answer ${answerIndex + 1}`} onClick={() => updateQuestion(questionIndex, { answers: question.answers.filter((_, index) => index !== answerIndex) })}>Remove</button>}
-                </div>
-              ))}
-              {question.answers.length < 8 && <button type="button" className="text-sm text-accent hover:text-teal-200" onClick={() => updateQuestion(questionIndex, { answers: [...question.answers, { label: "", correct: false }] })}>+ Add answer choice</button>}
-            </fieldset>
-          </section>
-        ))}
-        {questions.length < 50 && <button type="button" className="btn-ghost !px-3 !py-2 text-xs" onClick={() => setQuestions((current) => [...current, newQuestion()])}>Add question</button>}
-      </div>
+      <QuestionEditor questions={questions} setQuestions={setQuestions} />
 
       {(error || success) && <p className={error ? "text-sm text-red-300" : "text-sm text-accent"} role={error ? "alert" : "status"}>{error || success}</p>}
       <button className="btn-primary" disabled={busy || courseLoading || availableCourses.length === 0}>{busy ? "Creating assessment..." : "Create assessment"}</button>

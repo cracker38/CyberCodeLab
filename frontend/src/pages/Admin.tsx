@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AuthGate } from "../components/AuthGate";
 import { Seo } from "../components/Seo";
 import { StaffContentStudio, StatTile } from "../components/StaffStudio";
+import { ProfessionalExamManager } from "../components/ProfessionalExamManager";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError, api } from "../services/api";
 
@@ -150,6 +151,7 @@ function AdminWorkspace() {
 
         {tab === "content" && (
           <div className="mt-8">
+            <ProfessionalExamManager />
             <StaffContentStudio />
           </div>
         )}
