@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
@@ -12,6 +12,8 @@ type Q = {
     id: string;
     title: string;
     passingScore: number;
+    isLevelExam: boolean;
+    course: { slug: string; title: string } | null;
     questions: { id: string; prompt: string; type: string; answers: { id: string; label: string }[] }[];
   };
   attempts: { id: string; score: number; passed: number; created_at: string }[];
@@ -162,6 +164,21 @@ export function QuizPage() {
         {result && (
           <div className="surface mt-8 p-6">
             <p className="text-2xl font-semibold">{result.score}%</p>
+            {data.quiz.isLevelExam && data.quiz.course && (
+              <div className="mt-4 rounded-lg border border-line bg-ink-900/70 p-4" role="status">
+                <p className="font-medium text-white">
+                  {result.passed ? "Level exam passed" : "Your current learning level remains open"}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                  {result.passed
+                    ? "Your pass is recorded. Complete every lesson in this level to unlock the next category."
+                    : "Review the course lessons, continue learning, and retake this exam whenever you are ready."}
+                </p>
+                <Link to={"/courses/" + data.quiz.course.slug} className="mt-3 inline-flex text-sm font-medium text-accent hover:text-teal-200">
+                  Continue with {data.quiz.course.title} <span className="ml-1" aria-hidden="true">→</span>
+                </Link>
+              </div>
+            )}
             <p className="mt-1 text-slate-400">{result.passed ? "Passed" : "Not yet — review and try again."}</p>
             <ul className="mt-6 space-y-4 text-sm">
               {result.review.map((r, i) => (

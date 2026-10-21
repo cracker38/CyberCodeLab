@@ -3,6 +3,7 @@ import { db, nowIso } from "../config/db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { id, parseJson } from "../utils/ids.js";
 import { bool, likeContains, num } from "../utils/sql.js";
+import { getEthicalCourseAccess } from "../services/ethicalPenetrationPath.js";
 
 function mapCourse(row: Record<string, unknown>) {
   return {
@@ -158,9 +159,37 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
   const continueLesson = lessons.find((l) => !completedLessonIds.includes(String(l.id)));
   const courseLessonOrder = new Map(lessons.map((lesson, index) => [String(lesson.id), index + 1]));
 
-  const quiz = db.prepare("SELECT id, title, passing_score FROM quizzes WHERE course_id = ?").get(courseId) as
+  const quiz = db.prepare("SELECT id, title, passing_score FROM quizzes WHERE course_id = ? AND lesson_id IS NULL AND title NOT LIKE 'Level Exam:%' ORDER BY id LIMIT 1").get(courseId) as
     | { id: string; title: string; passing_score: number }
     | undefined;
+  const levelExam = db
+    .prepare("SELECT id, title, passing_score FROM quizzes WHERE course_id = ? AND title LIKE 'Level Exam:%' ORDER BY id LIMIT 1")
+    .get(courseId) as { id: string; title: string; passing_score: number } | undefined;
+  const entryExam = db
+    .prepare("SELECT id, title, passing_score FROM quizzes WHERE course_id = ? AND title LIKE 'Entry Exam:%' ORDER BY id LIMIT 1")
+    .get(courseId) as { id: string; title: string; passing_score: number } | undefined;
+  const levelExamAttempts = req.user && levelExam
+    ? db
+        .prepare(
+          `SELECT COUNT(*) AS total, MAX(passed) AS passed,
+             (SELECT score FROM quiz_attempts WHERE user_id = ? AND quiz_id = ? ORDER BY created_at DESC LIMIT 1) AS latest_score
+           FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?`,
+        )
+        .get(req.user.id, levelExam.id, req.user.id, levelExam.id) as { total: unknown; passed: unknown; latest_score: unknown }
+    : undefined;
+  const entryExamAttempts = req.user && entryExam
+    ? db
+        .prepare(
+          `SELECT COUNT(*) AS total, MAX(passed) AS passed,
+             (SELECT score FROM quiz_attempts WHERE user_id = ? AND quiz_id = ? ORDER BY created_at DESC LIMIT 1) AS latest_score
+           FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?`,
+        )
+        .get(req.user.id, entryExam.id, req.user.id, entryExam.id) as { total: unknown; passed: unknown; latest_score: unknown }
+    : undefined;
+  const access = getEthicalCourseAccess(req.user?.id, slug);
+  const nextCourseAccess = course.next_course_slug
+    ? getEthicalCourseAccess(req.user?.id, String(course.next_course_slug))
+    : null;
 
   const mappedModules = modules.map((m) => {
     const moduleLessons = lessons.filter((l) => l.module_id === m.id);
@@ -190,6 +219,8 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
 
   res.json({
     course: mapCourse(course),
+    access,
+    nextCourseAccess,
     modules: mappedModules,
     enrolled,
     progress: { completed, started, total: totalLessons, percent: progress },
@@ -202,6 +233,26 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
           }
         : null,
     quiz: quiz ? { id: quiz.id, title: quiz.title, passingScore: num(quiz.passing_score) } : null,
+    levelExam: levelExam
+      ? {
+          id: levelExam.id,
+          title: levelExam.title,
+          passingScore: num(levelExam.passing_score),
+          attempts: num(levelExamAttempts?.total),
+          passed: Boolean(levelExamAttempts?.passed),
+          latestScore: levelExamAttempts?.latest_score == null ? null : num(levelExamAttempts.latest_score),
+        }
+      : null,
+    entryExam: entryExam
+      ? {
+          id: entryExam.id,
+          title: entryExam.title,
+          passingScore: num(entryExam.passing_score),
+          attempts: num(entryExamAttempts?.total),
+          passed: Boolean(entryExamAttempts?.passed),
+          latestScore: entryExamAttempts?.latest_score == null ? null : num(entryExamAttempts.latest_score),
+        }
+      : null,
     relatedLabs: db
       .prepare(
         "SELECT slug, title, difficulty FROM labs WHERE related_course_id = ? AND published = 1 ORDER BY title LIMIT 4",
@@ -221,6 +272,11 @@ export const getLesson = asyncHandler(async (req: Request, res: Response) => {
   const staff = req.user?.role === "ADMIN" || req.user?.role === "INSTRUCTOR";
   if (!course || (!bool(course.published) && !staff)) {
     res.status(404).json({ error: "Course not found." });
+    return;
+  }
+  const access = getEthicalCourseAccess(req.user?.id, String(course.slug));
+  if (!access.available && !staff) {
+    res.status(403).json({ error: access.reason ?? "This level is locked.", access });
     return;
   }
   const courseId = String(course.id);
@@ -249,7 +305,7 @@ export const getLesson = asyncHandler(async (req: Request, res: Response) => {
   const next = index < siblings.length - 1 ? siblings[index + 1] : null;
 
   const quiz = db
-    .prepare("SELECT id, title, passing_score FROM quizzes WHERE lesson_id = ?")
+    .prepare("SELECT id, title, passing_score FROM quizzes WHERE lesson_id = ? AND title NOT LIKE 'Level Exam:%' AND title NOT LIKE 'Entry Exam:%'")
     .get(lessonId) as { id: string; title: string; passing_score: number } | undefined;
 
   let completed = false;
@@ -306,11 +362,17 @@ export const getLesson = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const enroll = asyncHandler(async (req: Request, res: Response) => {
-  const course = db.prepare("SELECT id FROM courses WHERE slug = ? AND published = 1").get(req.params.slug) as
-    | { id: string }
+  const course = db.prepare("SELECT id, slug FROM courses WHERE slug = ? AND published = 1").get(req.params.slug) as
+    | { id: string; slug: string }
     | undefined;
   if (!course) {
     res.status(404).json({ error: "Course not found." });
+    return;
+  }
+  const staff = req.user?.role === "ADMIN" || req.user?.role === "INSTRUCTOR";
+  const access = getEthicalCourseAccess(req.user?.id, course.slug);
+  if (!access.available && !staff) {
+    res.status(403).json({ error: access.reason ?? "This level is locked.", access });
     return;
   }
   db.prepare(
@@ -322,16 +384,21 @@ export const enroll = asyncHandler(async (req: Request, res: Response) => {
 export const startLesson = asyncHandler(async (req: Request, res: Response) => {
   const lesson = db
     .prepare(
-      `SELECT l.id, c.id as course_id, c.published
+      `SELECT l.id, c.id as course_id, c.slug as course_slug, c.published
        FROM lessons l
        JOIN modules m ON m.id = l.module_id
        JOIN courses c ON c.id = m.course_id
        WHERE l.id = ?`,
     )
-    .get(req.params.lessonId) as { id: string; course_id: string; published: number } | undefined;
+    .get(req.params.lessonId) as { id: string; course_id: string; course_slug: string; published: number } | undefined;
   const staff = req.user?.role === "ADMIN" || req.user?.role === "INSTRUCTOR";
   if (!lesson || (!bool(lesson.published) && !staff)) {
     res.status(404).json({ error: "Lesson not found." });
+    return;
+  }
+  const access = getEthicalCourseAccess(req.user?.id, lesson.course_slug);
+  if (!access.available && !staff) {
+    res.status(403).json({ error: access.reason ?? "This level is locked.", access });
     return;
   }
 
@@ -354,17 +421,22 @@ export const startLesson = asyncHandler(async (req: Request, res: Response) => {
 export const completeLesson = asyncHandler(async (req: Request, res: Response) => {
   const lesson = db
     .prepare(
-      `SELECT l.id, l.module_id, c.published FROM lessons l
+      `SELECT l.id, l.module_id, c.slug as course_slug, c.published FROM lessons l
        JOIN modules m ON m.id = l.module_id
        JOIN courses c ON c.id = m.course_id
        WHERE l.id = ?`,
     )
     .get(req.params.lessonId) as
-    | { id: string; module_id: string; published: number }
+    | { id: string; module_id: string; course_slug: string; published: number }
     | undefined;
   const staff = req.user?.role === "ADMIN" || req.user?.role === "INSTRUCTOR";
   if (!lesson || (!bool(lesson.published) && !staff)) {
     res.status(404).json({ error: "Lesson not found." });
+    return;
+  }
+  const access = getEthicalCourseAccess(req.user?.id, lesson.course_slug);
+  if (!access.available && !staff) {
+    res.status(403).json({ error: access.reason ?? "This level is locked.", access });
     return;
   }
   const course = db

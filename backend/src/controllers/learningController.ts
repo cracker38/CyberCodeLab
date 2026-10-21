@@ -3,6 +3,7 @@ import { db, nowIso } from "../config/db.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { id } from "../utils/ids.js";
 import { num } from "../utils/sql.js";
+import { getEthicalQuizAccess } from "../services/ethicalPenetrationPath.js";
 
 const PATH_ORDER = [
   "cybersecurity-fundamentals",
@@ -21,12 +22,32 @@ export const getQuiz = asyncHandler(async (req: Request, res: Response) => {
     res.status(404).json({ error: "Quiz not found." });
     return;
   }
+  const access = getEthicalQuizAccess(req.user!.id, quiz.id);
+  if (access && !access.available) {
+    res.status(403).json({ error: access.reason ?? "This assessment is locked.", access });
+    return;
+  }
+  const course = db
+    .prepare(
+      `SELECT c.slug, c.title FROM quizzes q
+       LEFT JOIN modules m ON m.id = (SELECT l.module_id FROM lessons l WHERE l.id = q.lesson_id)
+       LEFT JOIN courses c ON c.id = COALESCE(q.course_id, m.course_id)
+       WHERE q.id = ?`,
+    )
+    .get(quiz.id) as { slug: string; title: string } | undefined;
   const questions = db
     .prepare("SELECT id, prompt, type, sort_order FROM questions WHERE quiz_id = ? ORDER BY sort_order")
     .all(quiz.id) as { id: string; prompt: string; type: string }[];
   if (questions.length === 0) {
     res.json({
-      quiz: { id: quiz.id, title: quiz.title, passingScore: num(quiz.passing_score), questions: [] },
+      quiz: {
+        id: quiz.id,
+        title: quiz.title,
+        passingScore: num(quiz.passing_score),
+        isLevelExam: quiz.title.startsWith("Level Exam:"),
+        course: course ?? null,
+        questions: [],
+      },
       attempts: [],
     });
     return;
@@ -52,6 +73,8 @@ export const getQuiz = asyncHandler(async (req: Request, res: Response) => {
       id: quiz.id,
       title: quiz.title,
       passingScore: num(quiz.passing_score),
+      isLevelExam: quiz.title.startsWith("Level Exam:"),
+      course: course ?? null,
       questions: questions.map((q) => ({
         id: q.id,
         prompt: q.prompt,
@@ -69,6 +92,11 @@ export const submitQuiz = asyncHandler(async (req: Request, res: Response) => {
     | undefined;
   if (!quiz) {
     res.status(404).json({ error: "Quiz not found." });
+    return;
+  }
+  const access = getEthicalQuizAccess(req.user!.id, quiz.id);
+  if (access && !access.available) {
+    res.status(403).json({ error: access.reason ?? "This assessment is locked.", access });
     return;
   }
   const submitted = req.body.answers as Record<string, string | string[]>;

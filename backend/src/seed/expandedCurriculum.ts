@@ -1,6 +1,11 @@
 import { db, nowIso } from "../config/db.js";
 import { id } from "../utils/ids.js";
 import { penetrationTestingCourses } from "./penetrationTestingCurriculum.js";
+import {
+  penetrationTestingEntryExam,
+  penetrationTestingExams,
+  type ProfessionalLevelExam,
+} from "./penetrationTestingExams.js";
 
 type Answer = { label: string; correct: boolean };
 type Question = { prompt: string; explanation: string; answers: Answer[] };
@@ -306,6 +311,34 @@ const specialistCourses: ExpandedCourse[] = [
 
 const courses: ExpandedCourse[] = [...specialistCourses, ...penetrationTestingCourses];
 
+function syncProfessionalExam(courseId: string, exam: ProfessionalLevelExam): void {
+  const existingExam = db
+    .prepare("SELECT id FROM quizzes WHERE course_id = ? AND title = ?")
+    .get(courseId, exam.title) as { id: string } | undefined;
+  if (existingExam) return;
+
+  const examLesson = db
+    .prepare("SELECT l.id FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = ? ORDER BY m.sort_order, l.sort_order LIMIT 1")
+    .get(courseId) as { id: string } | undefined;
+  const quizId = id();
+  db.prepare("INSERT INTO quizzes (id, title, lesson_id, course_id, passing_score) VALUES (?, ?, ?, ?, ?)").run(
+    quizId, exam.title, examLesson?.id ?? null, courseId, exam.passingScore,
+  );
+  const addQuestion = db.prepare(
+    "INSERT INTO questions (id, quiz_id, prompt, type, explanation, sort_order) VALUES (?, ?, ?, 'single', ?, ?)",
+  );
+  const addAnswer = db.prepare(
+    "INSERT INTO answers (id, question_id, label, is_correct, sort_order) VALUES (?, ?, ?, ?, ?)",
+  );
+  exam.questions.forEach((question, questionIndex) => {
+    const questionId = id();
+    addQuestion.run(questionId, quizId, question.prompt, question.explanation, questionIndex);
+    question.answers.forEach((answer, answerIndex) => {
+      addAnswer.run(id(), questionId, answer.label, answer.correct ? 1 : 0, answerIndex);
+    });
+  });
+}
+
 export function syncExpandedCurriculum(): void {
   const timestamp = nowIso();
   db.exec("BEGIN IMMEDIATE");
@@ -378,6 +411,10 @@ export function syncExpandedCurriculum(): void {
           });
         });
       }
+
+      if (course.slug === "ethical-penetration-testing-basic") syncProfessionalExam(courseRow.id, penetrationTestingEntryExam);
+      const levelExam = penetrationTestingExams[course.slug];
+      if (levelExam) syncProfessionalExam(courseRow.id, levelExam);
 
       const existingLab = db.prepare("SELECT id FROM labs WHERE slug = ?").get(course.lab.slug) as { id: string } | undefined;
       const labValues = [

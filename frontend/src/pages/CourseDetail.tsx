@@ -19,7 +19,26 @@ type Payload = {
   enrolled: boolean;
   progress: { completed: number; started: number; total: number; percent: number };
   continueLesson: { slug: string; title: string } | null;
-  quiz?: { id: string; title: string } | null;
+  access: {
+    available: boolean;
+    reason: string | null;
+    requirement: {
+      courseSlug: string;
+      courseTitle: string;
+      lessonsCompleted: number;
+      lessonsTotal: number;
+      examQuizId: string | null;
+      examTitle: string | null;
+      passingScore: number | null;
+      examAttempts: number;
+      examPassed: boolean;
+      latestExamScore: number | null;
+    } | null;
+  };
+  nextCourseAccess: { available: boolean; reason: string | null } | null;
+  quiz?: { id: string; title: string; passingScore: number } | null;
+  levelExam?: { id: string; title: string; passingScore: number; attempts: number; passed: boolean; latestScore: number | null } | null;
+  entryExam?: { id: string; title: string; passingScore: number; attempts: number; passed: boolean; latestScore: number | null } | null;
   relatedLabs: { slug: string; title: string; difficulty: string }[];
   relatedProjects: { slug: string; title: string; difficulty: string }[];
 };
@@ -52,13 +71,14 @@ export function CourseDetailPage() {
 
   if (error) return <p className="mx-auto max-w-3xl px-4 py-16 text-red-300">{error}</p>;
   if (!data) return <p className="mx-auto max-w-3xl px-4 py-16 text-slate-400">Loading course…</p>;
-  const { course, modules, progress, quiz, continueLesson } = data;
+  const { course, modules, progress, quiz, entryExam, levelExam, continueLesson, access } = data;
   const lessonCount = modules.reduce((total, module) => total + module.lessons.length, 0);
   const relatedLabs = data.relatedLabs ?? [];
   const relatedProjects = data.relatedProjects ?? [];
   const first = continueLesson ?? modules.flatMap((m) => m.lessons)[0];
 
   const goLearn = async () => {
+    if (!access.available) return;
     if (!user) {
       navigate(`/signin?next=${encodeURIComponent(`/courses/${course.slug}`)}`);
       return;
@@ -92,6 +112,89 @@ export function CourseDetailPage() {
           <Badge>{`${lessonCount} lessons`}</Badge>
         </div>
 
+        {entryExam && (
+          <section className="surface mt-8 border border-accent/20 p-5 sm:p-6" aria-labelledby="entry-exam-title">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-[11px] uppercase tracking-widest text-accent">Required before the Basic introduction</p>
+                <h2 id="entry-exam-title" className="mt-1 text-xl font-semibold text-white">{entryExam.title}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+                  Complete this short readiness check before opening the first lesson. Passing confirms readiness; if you do not pass, Basic lessons still open so you can study and retake it.
+                </p>
+                <p className="mt-3 text-xs text-slate-400">10 questions · {entryExam.passingScore}% target · Retakes allowed · Passing does not skip Basic lessons</p>
+                {entryExam.attempts > 0 && (
+                  <p className="mt-3 text-sm" role="status">
+                    {entryExam.passed ? <span className="text-accent">Readiness pass on record · </span> : <span className="text-amber-200">Basic study recommended · </span>}
+                    <span className="text-slate-300">Latest score: {entryExam.latestScore ?? 0}%</span>
+                  </p>
+                )}
+              </div>
+              <Link
+                to={user ? "/quizzes/" + entryExam.id : "/signin?next=" + encodeURIComponent("/quizzes/" + entryExam.id)}
+                className="btn-primary shrink-0"
+              >
+                {user ? (entryExam.attempts > 0 ? "Retake readiness check" : "Start readiness check") : "Sign in to begin"}
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {levelExam && access.available && (
+          <section className="surface mt-8 border border-accent/20 p-5 sm:p-6" aria-labelledby="level-exam-title">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-[11px] uppercase tracking-widest text-accent">
+                  {course.level === "Beginner" ? "Basic progression exam" : course.level === "Advanced" ? "Final professional exam" : "Intermediate progression exam"}
+                </p>
+                <h2 id="level-exam-title" className="mt-1 text-xl font-semibold text-white">{levelExam.title}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+                  {course.level === "Advanced"
+                    ? "This 10-question final assessment validates advanced professional practice. Review the explanations after each attempt and retake it whenever you are ready."
+                    : "Complete every lesson in this category, then pass this assessment with the required score to unlock the next level. If you need another attempt, this course stays available for review."}
+                </p>
+                <p className="mt-3 text-xs text-slate-400">10 questions · {levelExam.passingScore}% required · Retakes are allowed</p>
+                {levelExam.attempts > 0 && (
+                  <p className="mt-3 text-sm" role="status">
+                    {levelExam.passed ? <span className="text-accent">Passing attempt on record · </span> : <span className="text-amber-200">Not passed yet · </span>}
+                    <span className="text-slate-300">Latest score: {levelExam.latestScore ?? 0}%</span>
+                    {levelExam.passed && <span className="text-slate-400"> · Your pass is recorded</span>}
+                  </p>
+                )}
+              </div>
+              {progress.percent >= 100 ? (
+                user ? (
+                  <Link to={"/quizzes/" + levelExam.id} className="btn-primary shrink-0">
+                    {levelExam.attempts > 0 ? "Retake level exam" : "Start level exam"}
+                  </Link>
+                ) : (
+                  <Link to={"/signin?next=" + encodeURIComponent("/quizzes/" + levelExam.id)} className="btn-primary shrink-0">Sign in to take exam</Link>
+                )
+              ) : (
+                <button type="button" className="btn-ghost shrink-0" disabled>
+                  Complete all lessons first
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {!access.available && (
+          <section className="surface mt-5 border border-amber-300/20 p-5" aria-label="Level access requirements">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-amber-200">Level locked</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{access.reason}</p>
+            {access.requirement?.examQuizId && user && (!access.requirement.examPassed || course.level === "Beginner") && (
+              <Link to={"/quizzes/" + access.requirement.examQuizId} className="mt-4 inline-flex text-sm font-medium text-accent hover:text-teal-200">
+                {access.requirement.examAttempts > 0 ? "Retake " : "Take "}{access.requirement.courseTitle} exam <span className="ml-1" aria-hidden="true">→</span>
+              </Link>
+            )}
+            {access.requirement && access.requirement.courseSlug !== course.slug && (
+              <Link to={"/courses/" + access.requirement.courseSlug} className="mt-4 ml-4 inline-flex text-sm font-medium text-accent hover:text-teal-200">
+                Review prerequisite lessons <span className="ml-1" aria-hidden="true">→</span>
+              </Link>
+            )}
+          </section>
+        )}
+
         <section className="surface mt-8 p-5 sm:p-6" aria-label="Course progress">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -104,9 +207,13 @@ export function CourseDetailPage() {
             </p>
           </div>
           <div className="mt-4"><ProgressBar percent={progress.percent} label="Completed lessons" /></div>
-          <button className="btn-primary mt-5" disabled={busy} onClick={() => void goLearn()}>
-            {busy ? "Opening course..." : data.enrolled ? (progress.percent >= 100 ? "Review course" : "Continue learning") : "Enroll & start"}
-          </button>
+          {access.available ? (
+            <button className="btn-primary mt-5" disabled={busy} onClick={() => void goLearn()}>
+              {busy ? "Opening course..." : data.enrolled ? (progress.percent >= 100 ? "Review course" : "Continue learning") : "Enroll & start"}
+            </button>
+          ) : (
+            <p className="mt-5 text-sm text-amber-200">Complete the level requirement above to open lessons.</p>
+          )}
           {actionError && <p className="mt-3 text-sm text-red-300" role="alert">{actionError}</p>}
         </section>
 
@@ -176,6 +283,11 @@ export function CourseDetailPage() {
                           <Link
                             to={`/courses/${course.slug}/lessons/${l.slug}`}
                             className="group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-white/[0.025] sm:gap-4 sm:px-4"
+                            aria-disabled={!access.available}
+                            tabIndex={access.available ? 0 : -1}
+                            title={!access.available ? (access.reason ?? "Level locked") : undefined}
+                            style={{ opacity: access.available ? 1 : 0.55 }}
+                            onClick={(event) => { if (!access.available) event.preventDefault(); }}
                           >
                             <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-semibold tabular-nums ${l.completed ? "border-accent/30 bg-accent/10 text-accent" : l.started ? "border-amber-300/30 bg-amber-300/10 text-amber-200" : "border-line bg-ink-900 text-slate-500"}`} aria-hidden="true">
                               {l.completed ? "✓" : String(l.position).padStart(2, "0")}
@@ -198,12 +310,12 @@ export function CourseDetailPage() {
           </div>
         </section>
 
-        {quiz && user && (
+        {quiz && user && access.available && (
           <Link to={`/quizzes/${quiz.id}`} className="mt-8 inline-block text-accent">
             Course quiz: {quiz.title} →
           </Link>
         )}
-        {quiz && !user && (
+        {quiz && !user && access.available && (
           <p className="mt-8 text-sm text-slate-400">
             <Link to="/signin" className="text-accent">
               Sign in
@@ -247,11 +359,28 @@ export function CourseDetailPage() {
           </div>
         )}
 
-        {progress.percent >= 100 && course.nextCourseSlug && (
+        {progress.percent >= 100 && course.nextCourseSlug && data.nextCourseAccess?.available && (
           <div className="mt-10">
-            <Notice>You finished this course. Recommended next is waiting below.</Notice>
+            <Notice>
+              {course.category === "Ethical Penetration Testing"
+                ? "You finished this course and passed its level exam. The next category is now available."
+                : "You finished this course. Your recommended next course is available below."}
+            </Notice>
             <Link to={`/courses/${course.nextCourseSlug}`} className="mt-3 inline-block text-sm text-accent">
               Next course →
+            </Link>
+          </div>
+        )}
+        {progress.percent >= 100 && course.nextCourseSlug && !data.nextCourseAccess?.available && (
+          <div className="mt-10">
+            <Notice>{data.nextCourseAccess?.reason ?? "Pass the level exam to unlock the next category."}</Notice>
+            {levelExam && user && !levelExam.passed && (
+              <Link to={"/quizzes/" + levelExam.id} className="mt-3 inline-block text-sm text-accent">
+                {levelExam.attempts > 0 ? "Retake level exam" : "Take level exam"} →
+              </Link>
+            )}
+            <Link to={`/courses/${course.nextCourseSlug}`} className="mt-3 ml-4 inline-block text-sm text-slate-400 hover:text-white">
+              View next category overview →
             </Link>
           </div>
         )}

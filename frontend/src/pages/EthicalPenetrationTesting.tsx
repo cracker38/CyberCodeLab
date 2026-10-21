@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
 import { AsyncState, PageHeader, ProgressBar } from "../components/ui";
+import { useAuth } from "../hooks/useAuth";
 import { api } from "../services/api";
 
 type Level = "Beginner" | "Intermediate" | "Advanced";
@@ -24,6 +25,24 @@ type CoursePath = {
     lessons: { id: string; slug: string; title: string; durationMinutes: number; completed: boolean; started: boolean; position: number }[];
   }[];
   progress: { completed: number; started: number; total: number; percent: number };
+  access: {
+    available: boolean;
+    reason: string | null;
+    requirement: {
+      courseSlug: string;
+      courseTitle: string;
+      lessonsCompleted: number;
+      lessonsTotal: number;
+      examQuizId: string | null;
+      examTitle: string | null;
+      passingScore: number | null;
+      examAttempts: number;
+      examPassed: boolean;
+      latestExamScore: number | null;
+    } | null;
+  };
+  levelExam?: { id: string; title: string; passingScore: number; attempts: number; passed: boolean; latestScore: number | null } | null;
+  entryExam?: { id: string; title: string; passingScore: number; attempts: number; passed: boolean; latestScore: number | null } | null;
 };
 
 const PATHS: { level: Level; label: string; slug: string }[] = [
@@ -40,6 +59,7 @@ function formatDuration(totalMinutes: number): string {
 }
 
 export function EthicalPenetrationTestingPage() {
+  const { user } = useAuth();
   const [paths, setPaths] = useState<CoursePath[]>([]);
   const [level, setLevel] = useState<Level | "All">("Beginner");
   const [error, setError] = useState("");
@@ -113,11 +133,91 @@ export function EthicalPenetrationTestingPage() {
                       {path.course.title}
                     </h2>
                     <p className="mt-1 max-w-3xl text-sm text-slate-400">{path.course.subtitle}</p>
+                    <p className={`mt-2 text-xs font-medium ${path.access.available ? "text-accent" : "text-amber-200"}`}>
+                      {path.access.available ? "Available to study" : "Locked until the level requirement is met"}
+                      {path.progress.total > 0 && ` · ${path.progress.completed} of ${path.progress.total} lessons complete`}
+                    </p>
                   </div>
                   <Link to={`/courses/${path.course.slug}`} className="shrink-0 text-sm font-medium text-accent hover:text-teal-200">
                     Course overview <span aria-hidden="true">→</span>
                   </Link>
                 </div>
+
+                {path.entryExam && (
+                  <div className="surface mb-4 flex flex-wrap items-center justify-between gap-4 border border-accent/15 p-4 sm:p-5">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-accent">Required before the Basic introduction</p>
+                      <h3 className="mt-1 font-semibold text-white">{path.entryExam.title}</h3>
+                      <p className="mt-1 text-sm text-slate-400">10 questions · {path.entryExam.passingScore}% target · Retakes allowed</p>
+                      <p className="mt-1 text-xs text-slate-500">A failed readiness check still opens Basic lessons for study.</p>
+                      {path.entryExam.attempts > 0 && (
+                        <p className="mt-2 text-xs text-slate-300">
+                          {path.entryExam.passed ? "Readiness passed" : "Basic study recommended"} · latest score {path.entryExam.latestScore ?? 0}%
+                        </p>
+                      )}
+                    </div>
+                    <Link
+                      to={user ? "/quizzes/" + path.entryExam.id : "/signin?next=" + encodeURIComponent("/quizzes/" + path.entryExam.id)}
+                      className="btn-primary shrink-0"
+                    >
+                      {user ? (path.entryExam.attempts > 0 ? "Retake readiness check" : "Start readiness check") : "Sign in to begin"}
+                    </Link>
+                  </div>
+                )}
+
+                {path.levelExam && path.course.level !== "Beginner" && (
+                  <div className="surface mb-4 flex flex-wrap items-center justify-between gap-4 border border-accent/15 p-4 sm:p-5">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-accent">
+                        {path.course.level === "Advanced" ? "Final professional exam" : "Level progression exam"}
+                      </p>
+                      <h3 className="mt-1 font-semibold text-white">{path.levelExam.title}</h3>
+                      <p className="mt-1 text-sm text-slate-400">10 questions · {path.levelExam.passingScore}% required · Retakes allowed</p>
+                      {path.levelExam.attempts > 0 && (
+                        <p className="mt-2 text-xs text-slate-300">
+                          {path.levelExam.passed ? "Passed" : "Retake available"} · latest score {path.levelExam.latestScore ?? 0}%
+                        </p>
+                      )}
+                    </div>
+                    {path.access.available ? (
+                      path.progress.percent >= 100 ? (
+                      <Link
+                        to={user ? "/quizzes/" + path.levelExam.id : "/signin?next=" + encodeURIComponent("/quizzes/" + path.levelExam.id)}
+                        className="btn-primary shrink-0"
+                      >
+                        {user ? (path.levelExam.attempts > 0 ? "Retake exam" : "Take exam") : "Sign in to take exam"}
+                      </Link>
+                      ) : (
+                        <button type="button" className="btn-ghost shrink-0" disabled>Complete all lessons first</button>
+                      )
+                    ) : (
+                      <Link
+                        to={path.access.requirement?.examQuizId && !path.access.requirement.examPassed
+                          ? user
+                            ? "/quizzes/" + path.access.requirement.examQuizId
+                            : "/signin?next=" + encodeURIComponent("/quizzes/" + path.access.requirement.examQuizId)
+                          : "/courses/" + (path.access.requirement?.courseSlug ?? path.course.slug)}
+                        className="btn-ghost shrink-0"
+                      >
+                        {path.access.requirement?.examQuizId && !path.access.requirement.examPassed
+                          ? user ? "Take prerequisite exam" : "Sign in for prerequisite exam"
+                          : "Review prerequisite"}
+                      </Link>
+                    )}
+                  </div>
+                )}
+
+                {!path.access.available && path.access.reason && (
+                  <div className="mb-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.04] p-4 text-sm text-slate-300" role="status">
+                    <p className="font-medium text-amber-200">Level access requirement</p>
+                    <p className="mt-1 leading-relaxed">{path.access.reason}</p>
+                    {path.course.level !== "Beginner" && path.access.requirement && (
+                      <Link to={"/courses/" + path.access.requirement.courseSlug} className="mt-3 inline-block text-sm font-medium text-accent">
+                        Open {path.access.requirement.courseTitle} <span aria-hidden="true">→</span>
+                      </Link>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   {path.modules.map((module, moduleIndex) => {
@@ -159,6 +259,11 @@ export function EthicalPenetrationTestingPage() {
                                 <Link
                                   to={`/courses/${path.course.slug}/lessons/${lesson.slug}`}
                                   className="group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-white/[0.025] sm:gap-4 sm:px-4"
+                                  aria-disabled={!path.access.available}
+                                  tabIndex={path.access.available ? 0 : -1}
+                                  title={!path.access.available ? (path.access.reason ?? "Level locked") : undefined}
+                                  style={{ opacity: path.access.available ? 1 : 0.55 }}
+                                  onClick={(event) => { if (!path.access.available) event.preventDefault(); }}
                                 >
                                   <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-semibold tabular-nums ${lesson.completed ? "border-accent/30 bg-accent/10 text-accent" : lesson.started ? "border-amber-300/30 bg-amber-300/10 text-amber-200" : "border-line bg-ink-900 text-slate-500"}`} aria-hidden="true">
                                     {lesson.completed ? "✓" : String(lesson.position).padStart(2, "0")}
@@ -179,6 +284,31 @@ export function EthicalPenetrationTestingPage() {
                     );
                   })}
                 </div>
+
+                {path.course.level === "Beginner" && path.levelExam && path.access.available && (
+                  <div className="surface mt-4 flex flex-wrap items-center justify-between gap-4 border border-accent/15 p-4 sm:p-5">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-accent">Basic progression exam</p>
+                      <h3 className="mt-1 font-semibold text-white">{path.levelExam.title}</h3>
+                      <p className="mt-1 text-sm text-slate-400">Complete all Basic lessons, then score {path.levelExam.passingScore}% to unlock Intermediate.</p>
+                      {path.levelExam.attempts > 0 && (
+                        <p className="mt-2 text-xs text-slate-300">
+                          {path.levelExam.passed ? "Passed" : "Retake available"} · latest score {path.levelExam.latestScore ?? 0}%
+                        </p>
+                      )}
+                    </div>
+                    {path.progress.percent >= 100 ? (
+                      <Link
+                        to={user ? "/quizzes/" + path.levelExam.id : "/signin?next=" + encodeURIComponent("/quizzes/" + path.levelExam.id)}
+                        className="btn-primary shrink-0"
+                      >
+                        {user ? (path.levelExam.attempts > 0 ? "Retake level exam" : "Start level exam") : "Sign in to take exam"}
+                      </Link>
+                    ) : (
+                      <button type="button" className="btn-ghost shrink-0" disabled>Complete all lessons first</button>
+                    )}
+                  </div>
+                )}
               </section>
             ))}
           </div>
