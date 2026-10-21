@@ -8,7 +8,6 @@ import { api } from "../services/api";
 
 type Stats = { users: number; courses: number; labs: number; certificates: number };
 type Course = { slug: string; title: string; level: string; category: string };
-type Cert = { id: string; full_name: string; email: string; course_title: string; issued_at: string };
 
 export function InstructorPage() {
   return (
@@ -20,15 +19,13 @@ export function InstructorPage() {
 
 function InstructorWorkspace() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"overview" | "content" | "certificates">("overview");
+  const [tab, setTab] = useState<"overview" | "content">("overview");
   const [stats, setStats] = useState<Stats | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [certs, setCerts] = useState<Cert[]>([]);
 
   useEffect(() => {
     api<Stats>("/api/admin/stats").then(setStats);
     api<{ courses: Course[] }>("/api/courses").then((d) => setCourses(d.courses));
-    api<{ certificates: Cert[] }>("/api/admin/certificates").then((d) => setCerts(d.certificates));
   }, []);
 
   return (
@@ -48,7 +45,6 @@ function InstructorWorkspace() {
             [
               ["overview", "Overview"],
               ["content", "Publish"],
-              ["certificates", "Certificates"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -99,38 +95,6 @@ function InstructorWorkspace() {
           </div>
         )}
 
-        {tab === "certificates" && (
-          <div className="mt-8 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="py-2 pr-3">Learner</th>
-                  <th className="pr-3">Course</th>
-                  <th>Issued</th>
-                </tr>
-              </thead>
-              <tbody>
-                {certs.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="py-8 text-center text-slate-500">
-                      No certificates yet.
-                    </td>
-                  </tr>
-                )}
-                {certs.map((c) => (
-                  <tr key={c.id} className="border-t border-line">
-                    <td className="py-3 pr-3">
-                      {c.full_name}
-                      <div className="text-xs text-slate-500">{c.email}</div>
-                    </td>
-                    <td className="pr-3">{c.course_title}</td>
-                    <td className="text-slate-400">{new Date(c.issued_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </>
   );

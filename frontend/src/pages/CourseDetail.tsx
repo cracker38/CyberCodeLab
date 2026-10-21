@@ -29,6 +29,7 @@ export function CourseDetailPage() {
   const { user } = useAuth();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -54,10 +55,13 @@ export function CourseDetailPage() {
       return;
     }
     setBusy(true);
+    setActionError("");
     try {
       await api(`/api/courses/${course.slug}/enroll`, { method: "POST" });
       if (first) navigate(`/courses/${course.slug}/lessons/${first.slug}`);
       else load();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Could not enroll in this course.");
     } finally {
       setBusy(false);
     }
@@ -86,8 +90,9 @@ export function CourseDetailPage() {
             {progress.completed} / {progress.total} lessons completed
           </p>
           <button className="btn-primary mt-4" disabled={busy} onClick={() => void goLearn()}>
-            {data.enrolled ? (progress.percent >= 100 ? "Review course" : "Continue learning") : "Enroll & start"}
+            {busy ? "Opening course..." : data.enrolled ? (progress.percent >= 100 ? "Review course" : "Continue learning") : "Enroll & start"}
           </button>
+          {actionError && <p className="mt-3 text-sm text-red-300" role="alert">{actionError}</p>}
         </div>
 
         {course.prerequisites.length > 0 && (

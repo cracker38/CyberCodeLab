@@ -37,6 +37,21 @@ export const quizSubmitSchema = z.object({
   answers: z.record(z.union([z.string(), z.array(z.string())])),
 });
 
+const lessonCreateSchema = z.object({
+  slug: z.string().min(3).max(80).regex(/^[a-z0-9-]+$/),
+  title: z.string().min(3).max(160),
+  content: z.string().min(20).max(30000),
+  codeExample: z.string().max(12000).optional(),
+  exercise: z.string().max(4000).optional(),
+  durationMinutes: z.number().int().min(1).max(180),
+});
+
+const moduleCreateSchema = z.object({
+  title: z.string().min(2).max(160),
+  description: z.string().max(500).optional(),
+  lessons: z.array(lessonCreateSchema).min(1).max(50),
+});
+
 export const courseCreateSchema = z.object({
   slug: z.string().min(3).max(80).regex(/^[a-z0-9-]+$/),
   title: z.string().min(3).max(160),
@@ -48,6 +63,7 @@ export const courseCreateSchema = z.object({
   prerequisites: z.array(z.string()).optional(),
   nextCourseSlug: z.string().optional().nullable(),
   learningObjectives: z.array(z.string()).optional(),
+  modules: z.array(moduleCreateSchema).min(1).max(30),
   published: z.boolean().optional(),
 });
 

@@ -50,7 +50,16 @@ export function SignInPage() {
             try {
               await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
               await refresh();
-              navigate(next.startsWith("/") ? next : "/dashboard", { replace: true });
+              let safeNext = "/dashboard";
+              try {
+                const destination = new URL(next, window.location.origin);
+                if (destination.origin === window.location.origin) {
+                  safeNext = `${destination.pathname}${destination.search}${destination.hash}`;
+                }
+              } catch {
+                // Keep the default same-origin destination for malformed return paths.
+              }
+              navigate(safeNext, { replace: true });
             } catch (err) {
               setError(err instanceof ApiError ? err.message : "Could not sign in.");
             } finally {

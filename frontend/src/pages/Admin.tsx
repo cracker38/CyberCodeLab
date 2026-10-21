@@ -3,7 +3,7 @@ import { AuthGate } from "../components/AuthGate";
 import { Seo } from "../components/Seo";
 import { StaffContentStudio, StatTile } from "../components/StaffStudio";
 import { useAuth } from "../hooks/useAuth";
-import { api } from "../services/api";
+import { ApiError, api } from "../services/api";
 
 type Stats = { users: number; courses: number; labs: number; certificates: number };
 type Row = { id: string; email: string; full_name: string; role: string; enrollments: number; email_verified: number };
@@ -23,6 +23,7 @@ function AdminWorkspace() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<Row[]>([]);
   const [certs, setCerts] = useState<Cert[]>([]);
+  const [roleError, setRoleError] = useState("");
 
   useEffect(() => {
     api<Stats>("/api/admin/stats").then(setStats);
@@ -59,6 +60,8 @@ function AdminWorkspace() {
             </button>
           ))}
         </div>
+
+        {roleError && <p className="mt-4 rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2 text-sm text-red-200" role="alert">{roleError}</p>}
 
         {tab === "overview" && stats && (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -116,13 +119,20 @@ function AdminWorkspace() {
                       <select
                         className="rounded-md border border-line bg-ink-950 px-2 py-1 text-slate-200"
                         value={u.role}
+                        disabled={u.id === user?.id}
+                        aria-label={`Role for ${u.full_name}`}
                         onChange={async (e) => {
                           const role = e.target.value;
-                          await api(`/api/admin/users/${u.id}/role`, {
-                            method: "PATCH",
-                            body: JSON.stringify({ role }),
-                          });
-                          setUsers(users.map((x) => (x.id === u.id ? { ...x, role } : x)));
+                          setRoleError("");
+                          try {
+                            await api(`/api/admin/users/${u.id}/role`, {
+                              method: "PATCH",
+                              body: JSON.stringify({ role }),
+                            });
+                            setUsers((current) => current.map((x) => (x.id === u.id ? { ...x, role } : x)));
+                          } catch (err) {
+                            setRoleError(err instanceof ApiError ? err.message : "Could not update this member’s role.");
+                          }
                         }}
                       >
                         <option>USER</option>

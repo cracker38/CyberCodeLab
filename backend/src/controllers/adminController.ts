@@ -17,9 +17,27 @@ export const listUsers = asyncHandler(async (_req: Request, res: Response) => {
 
 export const updateUserRole = asyncHandler(async (req: Request, res: Response) => {
   const roleName = String(req.body.role ?? "");
-  if (!["USER", "ADMIN"].includes(roleName)) {
+  if (!["USER", "INSTRUCTOR", "ADMIN"].includes(roleName)) {
     res.status(400).json({ error: "Invalid role." });
     return;
+  }
+  const target = db
+    .prepare("SELECT u.id, r.name as role FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = ?")
+    .get(req.params.id) as { id: string; role: string } | undefined;
+  if (!target) {
+    res.status(404).json({ error: "User not found." });
+    return;
+  }
+  if (target.id === req.user!.id && roleName !== "ADMIN") {
+    res.status(409).json({ error: "You cannot remove your own administrator access." });
+    return;
+  }
+  if (target.role === "ADMIN" && roleName !== "ADMIN") {
+    const admins = num((db.prepare("SELECT COUNT(*) as c FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'ADMIN'").get() as { c: unknown }).c);
+    if (admins <= 1) {
+      res.status(409).json({ error: "The platform must keep at least one administrator." });
+      return;
+    }
   }
   const role = db.prepare("SELECT id FROM roles WHERE name = ?").get(roleName) as { id: number } | undefined;
   if (!role) {
@@ -42,29 +60,73 @@ export const createCourse = asyncHandler(async (req: Request, res: Response) => 
     prerequisites?: string[];
     nextCourseSlug?: string | null;
     learningObjectives?: string[];
+    modules: {
+      title: string;
+      description?: string;
+      lessons: {
+        slug: string;
+        title: string;
+        content: string;
+        codeExample?: string;
+        exercise?: string;
+        durationMinutes: number;
+      }[];
+    }[];
     published?: boolean;
   };
   const courseId = id();
-  db.prepare(
-    `INSERT INTO courses (id, slug, title, subtitle, description, level, category, estimated_hours, prerequisites, next_course_slug, learning_objectives, published, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    courseId,
-    body.slug,
-    body.title,
-    body.subtitle ?? "",
-    body.description,
-    body.level,
-    body.category,
-    body.estimatedHours ?? 8,
-    JSON.stringify(body.prerequisites ?? []),
-    body.nextCourseSlug ?? null,
-    JSON.stringify(body.learningObjectives ?? []),
-    body.published === false ? 0 : 1,
-    nowIso(),
-    nowIso(),
-  );
-  res.status(201).json({ id: courseId });
+  let lessonCount = 0;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
+      `INSERT INTO courses (id, slug, title, subtitle, description, level, category, estimated_hours, prerequisites, next_course_slug, learning_objectives, published, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      courseId,
+      body.slug,
+      body.title,
+      body.subtitle ?? "",
+      body.description,
+      body.level,
+      body.category,
+      body.estimatedHours ?? 8,
+      JSON.stringify(body.prerequisites ?? []),
+      body.nextCourseSlug ?? null,
+      JSON.stringify(body.learningObjectives ?? []),
+      body.published === false ? 0 : 1,
+      nowIso(),
+      nowIso(),
+    );
+
+    const addModule = db.prepare("INSERT INTO modules (id, course_id, title, description, sort_order) VALUES (?, ?, ?, ?, ?)");
+    const addLesson = db.prepare(
+      `INSERT INTO lessons (id, module_id, slug, title, content, code_example, exercise, sort_order, duration_minutes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    body.modules.forEach((module, moduleIndex) => {
+      const moduleId = id();
+      addModule.run(moduleId, courseId, module.title, module.description ?? "", moduleIndex);
+      module.lessons.forEach((lesson, lessonIndex) => {
+        addLesson.run(
+          id(),
+          moduleId,
+          lesson.slug,
+          lesson.title,
+          lesson.content,
+          lesson.codeExample ?? null,
+          lesson.exercise ?? null,
+          lessonIndex,
+          lesson.durationMinutes,
+        );
+        lessonCount += 1;
+      });
+    });
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+  res.status(201).json({ id: courseId, modulesCreated: body.modules.length, lessonsCreated: lessonCount });
 });
 
 export const createAnnouncement = asyncHandler(async (req: Request, res: Response) => {

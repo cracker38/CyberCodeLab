@@ -124,8 +124,20 @@ export const dashboard = asyncHandler(async (req: Request, res: Response) => {
   const quizzesCompleted = num(
     (db.prepare("SELECT COUNT(*) as c FROM quiz_attempts WHERE user_id = ? AND passed = 1").get(userId) as { c: unknown }).c,
   );
-  const totalLessons = num((db.prepare("SELECT COUNT(*) as c FROM lessons").get() as { c: unknown }).c);
-  const overall = totalLessons === 0 ? 0 : Math.min(100, Math.round((lessonsCompleted / totalLessons) * 100));
+  const enrolledLessonTotals = db
+    .prepare(
+      `SELECT COUNT(DISTINCT l.id) as total,
+        COUNT(DISTINCT CASE WHEN lp.completed = 1 THEN l.id END) as done
+       FROM enrollments e
+       JOIN modules m ON m.course_id = e.course_id
+       JOIN lessons l ON l.module_id = m.id
+       LEFT JOIN lesson_progress lp ON lp.lesson_id = l.id AND lp.user_id = e.user_id
+       WHERE e.user_id = ?`,
+    )
+    .get(userId) as { total: unknown; done: unknown };
+  const overallLessons = num(enrolledLessonTotals.total);
+  const overallDone = num(enrolledLessonTotals.done);
+  const overall = overallLessons === 0 ? 0 : Math.round((overallDone / overallLessons) * 100);
 
   const recentCourses = (
     db
@@ -240,6 +252,8 @@ export const dashboard = asyncHandler(async (req: Request, res: Response) => {
       labsCompleted,
       quizzesCompleted,
       overallProgress: overall,
+      overallLessons,
+      overallLessonsDone: overallDone,
     },
     continueLearning: continueRow
       ? {

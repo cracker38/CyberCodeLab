@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { Seo } from "../components/Seo";
-import { ProgressBar } from "../components/ui";
+import { Empty, ProgressBar } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { ApiError, api } from "../services/api";
 
@@ -22,6 +22,7 @@ export function QuizPage() {
   const { user, loading } = useAuth();
   const [data, setData] = useState<Q | null>(null);
   const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<Record<string, string | string[]>>({});
   const [busy, setBusy] = useState(false);
@@ -62,15 +63,18 @@ export function QuizPage() {
   };
 
   const toggleMulti = (qid: string, aid: string) => {
-    const cur = Array.isArray(selected[qid]) ? [...(selected[qid] as string[])] : [];
-    const next = cur.includes(aid) ? cur.filter((x) => x !== aid) : [...cur, aid];
-    setSelected({ ...selected, [qid]: next });
+    setSelected((current) => {
+      const cur = Array.isArray(current[qid]) ? [...(current[qid] as string[])] : [];
+      const next = cur.includes(aid) ? cur.filter((x) => x !== aid) : [...cur, aid];
+      return { ...current, [qid]: next };
+    });
   };
 
   const retry = () => {
     setResult(null);
     setIndex(0);
     setSelected({});
+    setSubmitError("");
     load();
   };
 
@@ -128,6 +132,7 @@ export function QuizPage() {
                   disabled={busy || !answered(q.id, q.type)}
                   onClick={async () => {
                     setBusy(true);
+                    setSubmitError("");
                     try {
                       const r = await api<{
                         score: number;
@@ -140,18 +145,20 @@ export function QuizPage() {
                       setResult(r);
                       load();
                     } catch (e) {
-                      setError(e instanceof ApiError ? e.message : "Could not submit quiz.");
+                      setSubmitError(e instanceof ApiError ? e.message : "Could not submit quiz.");
                     } finally {
                       setBusy(false);
                     }
                   }}
                 >
-                  Submit answers
+                  {busy ? "Submitting..." : "Submit answers"}
                 </button>
               )}
             </div>
           </div>
         )}
+        {!result && total === 0 && <div className="mt-8"><Empty title="This quiz is being prepared" hint="There are no questions available yet. Come back later or continue with another lesson." /></div>}
+        {submitError && !result && <p className="mt-4 text-sm text-red-300" role="alert">{submitError}</p>}
         {result && (
           <div className="surface mt-8 p-6">
             <p className="text-2xl font-semibold">{result.score}%</p>

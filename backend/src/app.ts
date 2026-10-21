@@ -10,13 +10,7 @@ import { apiRouter } from "./routes/api.js";
 import { authRouter } from "./routes/auth.js";
 
 function isAllowedOrigin(origin: string): boolean {
-  if (env.frontendOrigins.includes(origin)) return true;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    return host.endsWith(".vercel.app") && host.includes("cyber-code-lab");
-  } catch {
-    return false;
-  }
+  return env.frontendOrigins.includes(origin.replace(/\/$/, ""));
 }
 
 export function createApp() {
@@ -43,6 +37,18 @@ export function createApp() {
       credentials: true,
     }),
   );
+  app.use((req, res, next) => {
+    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      next();
+      return;
+    }
+    const origin = req.get("origin");
+    if (origin && !isAllowedOrigin(origin)) {
+      res.status(403).json({ error: "This origin is not allowed to make changes." });
+      return;
+    }
+    next();
+  });
   app.use(express.json({ limit: "200kb" }));
   app.use(cookieParser());
   app.use(
@@ -58,7 +64,7 @@ export function createApp() {
     res.json({ ok: true, name: "CyberCode Lab API", health: "/api/health" });
   });
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, name: "CyberCode Lab API", frontendOrigins: env.frontendOrigins });
+    res.json({ ok: true, name: "CyberCode Lab API" });
   });
 
   app.use("/api/auth", authRouter);

@@ -11,14 +11,17 @@ import {
 } from "../validators/schemas.js";
 
 export const adminRouter = Router();
-adminRouter.use(requireAuth, requireRole("ADMIN"));
+adminRouter.use(requireAuth);
 
-adminRouter.get("/stats", admin.adminStats);
-adminRouter.get("/users", requireRole("ADMIN"), admin.listUsers);
-adminRouter.patch("/users/:id/role", requireRole("ADMIN"), admin.updateUserRole);
-adminRouter.get("/certificates", admin.listCertificates);
-adminRouter.post("/courses", validate(courseCreateSchema), admin.createCourse);
-adminRouter.post("/labs", validate(labCreateSchema), admin.createLab);
-adminRouter.post("/projects", validate(projectCreateSchema), admin.createProject);
-adminRouter.post("/resources", validate(resourceCreateSchema), admin.createResource);
-adminRouter.post("/announcements", validate(announcementSchema), admin.createAnnouncement);
+const staff = requireRole("ADMIN", "INSTRUCTOR");
+const adminOnly = requireRole("ADMIN");
+
+adminRouter.get("/stats", staff, admin.adminStats);
+adminRouter.get("/users", adminOnly, admin.listUsers);
+adminRouter.patch("/users/:id/role", adminOnly, admin.updateUserRole);
+adminRouter.get("/certificates", adminOnly, admin.listCertificates);
+adminRouter.post("/courses", staff, validate(courseCreateSchema), admin.createCourse);
+adminRouter.post("/labs", staff, validate(labCreateSchema), admin.createLab);
+adminRouter.post("/projects", staff, validate(projectCreateSchema), admin.createProject);
+adminRouter.post("/resources", staff, validate(resourceCreateSchema), admin.createResource);
+adminRouter.post("/announcements", staff, validate(announcementSchema), admin.createAnnouncement);
