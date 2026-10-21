@@ -1,6 +1,7 @@
 import { db, initSchema, nowIso } from "../config/db.js";
 import { hashPassword } from "../utils/crypto.js";
 import { id } from "../utils/ids.js";
+import { syncExpandedCurriculum } from "./expandedCurriculum.js";
 
 function wipe(): void {
   const tables = [
@@ -944,6 +945,8 @@ Checklist for a VM you created. Never apply unsolicited changes to machines you 
     ts,
   );
 
+  syncExpandedCurriculum();
+
   console.log("Seed complete.");
   console.log("Admin: admin@cybercodelab.local / AdminLab!2026");
   console.log("Learner: learner@cybercodelab.local / LearnLab!2026");
@@ -957,7 +960,10 @@ export async function seedIfEmpty(): Promise<void> {
   } catch {
     count = 0;
   }
-  if (count > 0) return;
+  if (count > 0) {
+    syncExpandedCurriculum();
+    return;
+  }
   await seed();
 }
 

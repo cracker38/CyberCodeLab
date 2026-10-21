@@ -157,9 +157,10 @@ export function HomePage() {
               Beginners start with fundamentals. Each path answers what to learn next.
             </p>
           </div>
-          <Link to="/learn" className="hidden text-sm text-accent sm:inline">
-            Full roadmap →
-          </Link>
+          <div className="flex gap-4 text-sm">
+            <Link to="/courses" className="text-accent hover:text-teal-200">Browse all courses</Link>
+            <Link to="/learn" className="hidden text-accent hover:text-teal-200 sm:inline">Full roadmap →</Link>
+          </div>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {(data?.courses.length

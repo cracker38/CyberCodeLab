@@ -4,6 +4,8 @@
 
 A professional cybersecurity education platform: structured courses, authorized labs, projects, quizzes, progress tracking, and administration.
 
+The catalog includes in-depth learning paths for fundamentals, networking, Linux, Python, web security, AI, secure software development, blue-team operations, cloud security, digital forensics, DevSecOps, and security governance. Existing databases receive the built-in curriculum automatically when the API starts; learner accounts and progress are preserved.
+
 ## Stack
 
 - **Frontend:** React, Vite, TypeScript, Tailwind CSS
