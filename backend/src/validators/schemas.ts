@@ -37,6 +37,35 @@ export const quizSubmitSchema = z.object({
   answers: z.record(z.union([z.string(), z.array(z.string())])),
 });
 
+const quizAnswerCreateSchema = z.object({
+  label: z.string().min(1).max(500),
+  correct: z.boolean(),
+});
+
+const quizQuestionCreateSchema = z
+  .object({
+    prompt: z.string().min(5).max(1200),
+    type: z.enum(["single", "multiple"]),
+    explanation: z.string().max(2000).optional(),
+    answers: z.array(quizAnswerCreateSchema).min(2).max(8),
+  })
+  .superRefine((question, context) => {
+    const correctCount = question.answers.filter((answer) => answer.correct).length;
+    if (question.type === "single" && correctCount !== 1) {
+      context.addIssue({ code: "custom", message: "Single-answer questions need exactly one correct answer." });
+    }
+    if (question.type === "multiple" && correctCount < 1) {
+      context.addIssue({ code: "custom", message: "Select at least one correct answer." });
+    }
+  });
+
+export const quizCreateSchema = z.object({
+  courseId: z.string().uuid(),
+  title: z.string().min(3).max(160),
+  passingScore: z.number().int().min(1).max(100),
+  questions: z.array(quizQuestionCreateSchema).min(1).max(50),
+});
+
 const lessonCreateSchema = z.object({
   slug: z.string().min(3).max(80).regex(/^[a-z0-9-]+$/),
   title: z.string().min(3).max(160),

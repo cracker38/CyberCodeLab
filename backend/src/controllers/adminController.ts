@@ -129,6 +129,59 @@ export const createCourse = asyncHandler(async (req: Request, res: Response) => 
   res.status(201).json({ id: courseId, modulesCreated: body.modules.length, lessonsCreated: lessonCount });
 });
 
+export const createQuiz = asyncHandler(async (req: Request, res: Response) => {
+  const body = req.body as {
+    courseId: string;
+    title: string;
+    passingScore: number;
+    questions: {
+      prompt: string;
+      type: "single" | "multiple";
+      explanation?: string;
+      answers: { label: string; correct: boolean }[];
+    }[];
+  };
+  const course = db.prepare("SELECT id FROM courses WHERE id = ?").get(body.courseId) as { id: string } | undefined;
+  if (!course) {
+    res.status(404).json({ error: "Course not found." });
+    return;
+  }
+  const existing = db.prepare("SELECT id FROM quizzes WHERE course_id = ? AND lesson_id IS NULL").get(course.id);
+  if (existing) {
+    res.status(409).json({ error: "This course already has a final assessment." });
+    return;
+  }
+
+  const quizId = id();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare("INSERT INTO quizzes (id, title, course_id, passing_score) VALUES (?, ?, ?, ?)").run(
+      quizId,
+      body.title,
+      course.id,
+      body.passingScore,
+    );
+    const addQuestion = db.prepare(
+      "INSERT INTO questions (id, quiz_id, prompt, type, explanation, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
+    );
+    const addAnswer = db.prepare(
+      "INSERT INTO answers (id, question_id, label, is_correct, sort_order) VALUES (?, ?, ?, ?, ?)",
+    );
+    body.questions.forEach((question, questionIndex) => {
+      const questionId = id();
+      addQuestion.run(questionId, quizId, question.prompt, question.type, question.explanation ?? null, questionIndex);
+      question.answers.forEach((answer, answerIndex) => {
+        addAnswer.run(id(), questionId, answer.label, answer.correct ? 1 : 0, answerIndex);
+      });
+    });
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+  res.status(201).json({ id: quizId, questionsCreated: body.questions.length });
+});
+
 export const createAnnouncement = asyncHandler(async (req: Request, res: Response) => {
   const { title, body, published } = req.body as { title: string; body: string; published?: boolean };
   const annId = id();

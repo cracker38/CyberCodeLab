@@ -125,6 +125,9 @@ CREATE TABLE IF NOT EXISTS quizzes (
   passing_score INTEGER NOT NULL DEFAULT 70
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_quizzes_course_assessment
+  ON quizzes(course_id) WHERE course_id IS NOT NULL AND lesson_id IS NULL;
+
 CREATE TABLE IF NOT EXISTS questions (
   id TEXT PRIMARY KEY,
   quiz_id TEXT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,

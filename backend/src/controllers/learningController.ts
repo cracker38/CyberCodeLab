@@ -367,7 +367,7 @@ export const learnPath = asyncHandler(async (req: Request, res: Response) => {
     status: string;
   }[];
 
-  const current = steps.find((s) => s.status === "in_progress") ?? steps.find((s) => s.status === "next") ?? steps[0];
+  const current = steps.find((s) => s.status === "in_progress") ?? steps.find((s) => s.status === "next");
   const labForCurrent = current
     ? (db
         .prepare(

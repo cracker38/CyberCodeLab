@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Field, inputClass } from "./ui";
 import { ApiError, api } from "../services/api";
+import { QuizStudio } from "./QuizStudio";
 
 type LessonDraft = {
   slug: string;
@@ -36,6 +37,7 @@ export function StaffContentStudio() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [modules, setModules] = useState<ModuleDraft[]>([newModule()]);
+  const [catalogVersion, setCatalogVersion] = useState(0);
 
   async function submit(path: string, body: unknown, success: string, form: HTMLFormElement, afterSuccess?: () => void) {
     setError("");
@@ -77,7 +79,10 @@ export function StaffContentStudio() {
               },
               "Course and lesson outline created.",
               form,
-              () => setModules([newModule()]),
+              () => {
+                setModules([newModule()]);
+                setCatalogVersion((version) => version + 1);
+              },
             );
           }}
         >
@@ -305,6 +310,10 @@ export function StaffContentStudio() {
           </div>
           <button className="btn-primary">Publish</button>
         </form>
+
+        <div className="xl:col-span-2">
+          <QuizStudio catalogVersion={catalogVersion} />
+        </div>
       </div>
     </div>
   );

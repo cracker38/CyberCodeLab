@@ -4,6 +4,10 @@
 
 :root {
   color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
@@ -17,11 +21,24 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
 body {
   @apply bg-ink-950 text-slate-100 antialiased;
   background-image:
-    radial-gradient(1200px 500px at 10% -10%, rgba(45, 212, 191, 0.08), transparent 50%),
-    radial-gradient(900px 400px at 100% 0%, rgba(56, 189, 248, 0.06), transparent 45%);
+    radial-gradient(900px 520px at 8% -8%, rgba(45, 212, 191, 0.11), transparent 58%),
+    radial-gradient(780px 520px at 104% 3%, rgba(56, 189, 248, 0.08), transparent 54%),
+    linear-gradient(180deg, #080b11 0%, #07090d 46%, #080b10 100%);
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
 }
 
 * {
@@ -37,23 +54,31 @@ body {
 }
 
 .page-wrap {
-  @apply mx-auto w-full max-w-6xl px-4;
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-[0_0_0_1px_rgba(45,212,191,0.25)] transition hover:bg-teal-300 disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-300 to-accent px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-[0_8px_24px_rgba(45,212,191,0.12)] transition duration-200 hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[0_12px_30px_rgba(45,212,191,0.2)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center rounded-md border border-line px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:border-accent/50 hover:bg-ink-800 hover:text-white disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-4 py-2.5 text-sm font-medium text-slate-200 transition duration-200 hover:border-accent/40 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .surface {
-  @apply rounded-xl border border-line bg-ink-900/90 shadow-card;
+  @apply rounded-2xl border border-white/[0.09] bg-gradient-to-br from-ink-900/95 to-ink-950/95 shadow-card backdrop-blur-sm;
 }
 
 .skeleton {
-  @apply animate-pulse rounded-xl border border-line bg-ink-800/80;
+  @apply animate-pulse rounded-2xl border border-white/[0.07] bg-ink-800/70;
+}
+
+.eyebrow {
+  @apply font-mono text-[11px] uppercase tracking-[0.18em] text-accent;
+}
+
+.section-divider {
+  @apply border-t border-white/[0.08];
 }
 
 .youtube-frame iframe {
@@ -65,6 +90,10 @@ body {
 
 .prose-lesson h3 {
   @apply mt-6 mb-2 text-lg font-semibold text-white;
+}
+
+.prose-lesson h2 {
+  @apply mt-8 mb-3 text-xl font-semibold tracking-tight text-white;
 }
 
 .prose-lesson p,
@@ -88,7 +117,23 @@ body {
   @apply text-white;
 }
 
+.prose-lesson a {
+  @apply text-accent underline decoration-accent/30 underline-offset-4 hover:decoration-accent;
+}
+
+.prose-lesson blockquote {
+  @apply my-4 border-l-2 border-accent/60 pl-4 text-slate-400;
+}
+
+.prose-lesson pre {
+  @apply overflow-x-auto rounded-xl border border-white/10 bg-ink-950 p-4 font-mono text-sm text-teal-100;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   * {
     animation: none !important;
     transition: none !important;

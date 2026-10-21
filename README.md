@@ -51,6 +51,9 @@ App: `http://localhost:5173`
 
 Change these passwords before any shared or production use.
 
+For production, set a unique `JWT_SECRET` with at least 32 random characters, list only HTTPS frontend origins in
+`FRONTEND_ORIGIN`, and set `TRUST_PROXY_HOPS` to match the number of trusted reverse proxies in front of the API.
+
 ## Architecture
 
 - Course, lab, quiz, and resource **content lives in SQLite**, not in React components.

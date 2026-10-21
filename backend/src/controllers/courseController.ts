@@ -43,6 +43,9 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
   }
   sql += " ORDER BY category, title";
   const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+  const assessedCourseIds = new Set(
+    (db.prepare("SELECT DISTINCT course_id FROM quizzes WHERE course_id IS NOT NULL AND lesson_id IS NULL").all() as { course_id: string }[]).map((row) => row.course_id),
+  );
   const facetRows = db
     .prepare(`SELECT level, category FROM courses ${includeDrafts ? "" : "WHERE published = 1"}`)
     .all() as { level: string; category: string }[];
@@ -82,6 +85,7 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
         completed: Boolean(enroll?.completed),
         progressPercent: total === 0 ? 0 : Math.round((done / total) * 100),
         lessonCount: total,
+        hasAssessment: assessedCourseIds.has(String(row.id)),
       };
     }),
     facets: {
@@ -103,15 +107,14 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
   const modules = db
     .prepare("SELECT * FROM modules WHERE course_id = ? ORDER BY sort_order")
     .all(courseId) as Record<string, unknown>[];
-  const moduleIds = modules.map((m) => String(m.id));
-  const lessons =
-    moduleIds.length === 0
-      ? []
-      : (db
-          .prepare(
-            `SELECT * FROM lessons WHERE module_id IN (${moduleIds.map(() => "?").join(",")}) ORDER BY sort_order`,
-          )
-          .all(...moduleIds) as Record<string, unknown>[]);
+  const lessons = db
+    .prepare(
+      `SELECT l.* FROM lessons l
+       JOIN modules m ON m.id = l.module_id
+       WHERE m.course_id = ?
+       ORDER BY m.sort_order, l.sort_order`,
+    )
+    .all(courseId) as Record<string, unknown>[];
 
   let completedLessonIds: string[] = [];
   let enrolled = false;

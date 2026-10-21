@@ -25,6 +25,8 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     setOpen(false);
@@ -44,11 +46,24 @@ export function Navbar() {
 
   const studio = user?.role === "ADMIN" ? "/admin" : user?.role === "INSTRUCTOR" ? "/instructor" : null;
 
+  const signOut = async () => {
+    setLogoutError("");
+    setLogoutBusy(true);
+    try {
+      await logout();
+      setOpen(false);
+    } catch {
+      setLogoutError("Could not sign out. Check your connection and try again.");
+    } finally {
+      setLogoutBusy(false);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 bg-ink-950/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+      <div className="page-wrap flex items-center justify-between gap-3 py-3">
         <Link to="/" className="flex shrink-0 items-center gap-2" aria-label="CyberCode Lab home">
-          <span className="grid h-8 w-8 place-items-center rounded-md border border-accent/40 bg-ink-800 font-mono text-xs text-accent">
+          <span className="grid h-9 w-9 place-items-center rounded-xl border border-accent/30 bg-gradient-to-br from-accent/15 to-sky-400/10 font-mono text-xs font-semibold text-accent shadow-[0_0_22px_rgba(45,212,191,0.08)]">
             CC
           </span>
           <span className="font-semibold tracking-tight">CyberCode Lab</span>
@@ -85,8 +100,8 @@ export function Navbar() {
                   {user.role === "ADMIN" ? "Admin" : "Instructor"}
                 </Link>
               )}
-              <button className="rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-white" onClick={() => void logout()}>
-                Sign out
+              <button type="button" className="rounded-lg px-3 py-1.5 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-white disabled:opacity-50" onClick={() => void signOut()} disabled={logoutBusy}>
+                {logoutBusy ? "Signing out..." : "Sign out"}
               </button>
             </>
           ) : (
@@ -102,6 +117,8 @@ export function Navbar() {
         </div>
         <button
           className="rounded-md border border-line px-3 py-1.5 text-sm lg:hidden"
+          type="button"
+          aria-label={open ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={open}
           aria-controls="mobile-nav"
           onClick={() => setOpen((v) => !v)}
@@ -109,6 +126,7 @@ export function Navbar() {
           {open ? "Close" : "Menu"}
         </button>
       </div>
+      {logoutError && <p className="page-wrap pb-2 text-sm text-red-300" role="alert">{logoutError}</p>}
       {open && (
         <div className="lg:hidden">
           <button
@@ -142,12 +160,12 @@ export function Navbar() {
                     </Link>
                   )}
                   <button
-                    className="rounded-md px-2 py-2.5 text-left"
-                    onClick={async () => {
-                      await logout();
-                    }}
+                    type="button"
+                    className="rounded-md px-2 py-2.5 text-left disabled:opacity-50"
+                    onClick={() => void signOut()}
+                    disabled={logoutBusy}
                   >
-                    Sign out
+                    {logoutBusy ? "Signing out..." : "Sign out"}
                   </button>
                 </>
               ) : (

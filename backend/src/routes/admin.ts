@@ -7,6 +7,7 @@ import {
   courseCreateSchema,
   labCreateSchema,
   projectCreateSchema,
+  quizCreateSchema,
   resourceCreateSchema,
 } from "../validators/schemas.js";
 
@@ -23,5 +24,6 @@ adminRouter.get("/certificates", adminOnly, admin.listCertificates);
 adminRouter.post("/courses", staff, validate(courseCreateSchema), admin.createCourse);
 adminRouter.post("/labs", staff, validate(labCreateSchema), admin.createLab);
 adminRouter.post("/projects", staff, validate(projectCreateSchema), admin.createProject);
+adminRouter.post("/quizzes", staff, validate(quizCreateSchema), admin.createQuiz);
 adminRouter.post("/resources", staff, validate(resourceCreateSchema), admin.createResource);
 adminRouter.post("/announcements", staff, validate(announcementSchema), admin.createAnnouncement);

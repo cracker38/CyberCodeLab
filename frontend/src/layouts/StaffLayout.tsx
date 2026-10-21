@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export function StaffLayout() {
   const { user, logout } = useAuth();
+  const [logoutError, setLogoutError] = useState("");
+  const [logoutBusy, setLogoutBusy] = useState(false);
   const isAdmin = user?.role === "ADMIN";
   const isStaff = isAdmin || user?.role === "INSTRUCTOR";
 
@@ -13,11 +16,23 @@ export function StaffLayout() {
     { to: "/courses", label: "Catalog" },
   ];
 
+  const signOut = async () => {
+    setLogoutError("");
+    setLogoutBusy(true);
+    try {
+      await logout();
+    } catch {
+      setLogoutError("Could not sign out. Check your connection and try again.");
+    } finally {
+      setLogoutBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="border-b border-line bg-ink-900 lg:border-b-0 lg:border-r">
         <div className="flex items-center gap-2 px-5 py-4">
-          <span className="grid h-8 w-8 place-items-center rounded-md border border-accent/40 bg-ink-800 font-mono text-xs text-accent">
+          <span className="grid h-9 w-9 place-items-center rounded-xl border border-accent/30 bg-accent/10 font-mono text-xs font-semibold text-accent">
             CC
           </span>
           <div>
@@ -43,17 +58,19 @@ export function StaffLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="hidden border-t border-line px-5 py-4 lg:block">
+        <div className="border-t border-line px-5 py-4">
           <p className="truncate text-sm text-slate-200">{user?.fullName ?? "Signed out"}</p>
           <p className="truncate font-mono text-[11px] text-slate-500">{user?.email}</p>
           {user && (
             <button
               className="mt-3 text-xs text-slate-400 hover:text-white"
-              onClick={() => void logout()}
+              onClick={() => void signOut()}
+              disabled={logoutBusy}
             >
-              Sign out
+              {logoutBusy ? "Signing out..." : "Sign out"}
             </button>
           )}
+          {logoutError && <p className="mt-2 text-xs text-red-300" role="alert">{logoutError}</p>}
         </div>
       </aside>
       <div className="min-w-0 bg-ink-950">
