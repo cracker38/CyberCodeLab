@@ -140,43 +140,61 @@ export function CourseDetailPage() {
             <h2 className="mt-1 text-2xl font-semibold text-white">Lessons and modules</h2>
             <p className="mt-2 text-sm text-slate-400">Work through the lessons in order. Your progress is saved as you start and complete each lesson.</p>
           </div>
-          <div className="space-y-5">
-          {modules.map((m, moduleIndex) => (
-            <section key={m.id} className="surface overflow-hidden">
-              <div className="p-5 sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-accent">Module {String(moduleIndex + 1).padStart(2, "0")}</p>
-                    <h3 className="mt-1 text-lg font-semibold text-white">{m.title}</h3>
-                    {m.description && <p className="mt-1 max-w-2xl text-sm text-slate-400">{m.description}</p>}
+          <div className="space-y-3">
+            {modules.map((m, moduleIndex) => {
+              const duration = m.lessons.reduce((sum, lesson) => sum + lesson.durationMinutes, 0);
+              return (
+            <details key={m.id} className="surface group overflow-hidden">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent [&::-webkit-details-marker]:hidden sm:gap-4 sm:p-5">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-accent/15 bg-accent/10 text-accent" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 4.75h11.25A2.25 2.25 0 0 1 19 7v12.25H7.75A2.25 2.25 0 0 1 5.5 17V4.75Zm0 0A2.25 2.25 0 0 0 3.25 7v10A2.25 2.25 0 0 0 5.5 19.25H19M8.5 8h7m-7 3h7" />
+                      </svg>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-accent">Module {String(moduleIndex + 1).padStart(2, "0")}</span>
+                      <span className="mt-0.5 block text-base font-semibold text-white sm:text-lg">{m.title}</span>
+                      {m.description && <span className="mt-1 block text-sm leading-snug text-slate-400">{m.description}</span>}
+                    </span>
+                <span className="shrink-0 text-right">
+                      <span className="block text-sm font-medium tabular-nums text-slate-300">{formatDuration(duration)}</span>
+                  <span className="mt-1 hidden text-xs text-slate-500 sm:block">{m.lessons.length} lessons</span>
+                    </span>
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-accent transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+                    </svg>
+                  </summary>
+                  <div className="border-t border-line px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                      <span>{m.progress.completed} of {m.progress.total} lessons complete</span>
+                  <span className="tabular-nums sm:hidden">{m.lessons.length} lessons</span>
+                    </div>
+                    <div className="mt-3"><ProgressBar percent={m.progress.percent} label={`${m.progress.percent}% module progress`} /></div>
+                    <ul className="mt-3 divide-y divide-line rounded-xl border border-line">
+                      {m.lessons.map((l) => (
+                        <li key={l.id}>
+                          <Link
+                            to={`/courses/${course.slug}/lessons/${l.slug}`}
+                            className="group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-white/[0.025] sm:gap-4 sm:px-4"
+                          >
+                            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-semibold tabular-nums ${l.completed ? "border-accent/30 bg-accent/10 text-accent" : l.started ? "border-amber-300/30 bg-amber-300/10 text-amber-200" : "border-line bg-ink-900 text-slate-500"}`} aria-hidden="true">
+                              {l.completed ? "✓" : String(l.position).padStart(2, "0")}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className={`block font-medium transition-colors group-hover:text-accent ${l.completed ? "text-slate-300" : "text-white"}`}>{l.title}</span>
+                              <span className="mt-1 block text-xs text-slate-500">{l.durationMinutes} min read</span>
+                            </span>
+                            <span className={`shrink-0 text-right text-xs ${l.completed ? "text-accent" : l.started ? "text-amber-200" : "text-slate-500"}`}>
+                              {l.completed ? "Completed" : l.started ? "In progress" : "Not started"}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <p className="text-sm tabular-nums text-slate-400">{m.progress.completed}/{m.progress.total} complete</p>
-                </div>
-                <div className="mt-4"><ProgressBar percent={m.progress.percent} label={`${m.progress.percent}% module progress`} /></div>
-              </div>
-              <ul className="divide-y divide-line border-t border-line">
-                {m.lessons.map((l) => (
-                  <li key={l.id}>
-                    <Link
-                      to={`/courses/${course.slug}/lessons/${l.slug}`}
-                      className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/[0.025] sm:px-6"
-                    >
-                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-semibold tabular-nums ${l.completed ? "border-accent/30 bg-accent/10 text-accent" : l.started ? "border-amber-300/30 bg-amber-300/10 text-amber-200" : "border-line bg-ink-900 text-slate-500"}`} aria-hidden="true">
-                        {l.completed ? "✓" : String(l.position).padStart(2, "0")}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className={`block font-medium transition-colors group-hover:text-accent ${l.completed ? "text-slate-300" : "text-white"}`}>{l.title}</span>
-                        <span className="mt-1 block text-xs text-slate-500">{l.durationMinutes} min read</span>
-                      </span>
-                      <span className={`shrink-0 text-xs ${l.completed ? "text-accent" : l.started ? "text-amber-200" : "text-slate-500"}`}>
-                        {l.completed ? "Completed" : l.started ? "In progress" : "Not started"}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+                </details>
+              );
+            })}
           </div>
         </section>
 

@@ -8,6 +8,7 @@ import { CertificatePage } from "./pages/Certificate";
 import { CourseDetailPage } from "./pages/CourseDetail";
 import { CoursesPage } from "./pages/Courses";
 import { DashboardPage } from "./pages/Dashboard";
+import { EthicalPenetrationTestingPage } from "./pages/EthicalPenetrationTesting";
 import { HomePage } from "./pages/Home";
 import { InstructorPage } from "./pages/Instructor";
 import { LabDetailPage } from "./pages/LabDetail";
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/learn" element={<LearnPage />} />
         <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/paths/ethical-penetration-testing" element={<EthicalPenetrationTestingPage />} />
         <Route path="/courses/:slug" element={<CourseDetailPage />} />
         <Route path="/courses/:slug/lessons/:lessonSlug" element={<LessonPage />} />
         <Route path="/labs" element={<LabsPage />} />

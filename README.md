@@ -4,7 +4,7 @@
 
 A professional cybersecurity education platform: structured courses, authorized labs, projects, quizzes, progress tracking, and administration.
 
-The catalog includes 12 learning paths across fundamentals, networking, Linux, Python, web security, AI, secure software development, blue-team operations, cloud security, digital forensics, DevSecOps, and security governance. Each path has three organized modules, nine lessons, practical exercises, and a knowledge check, across Basic (Beginner), Intermediate, and Advanced levels. Existing databases receive curriculum updates automatically when the API starts; learner accounts and lesson progress are preserved.
+The catalog includes 15 learning paths across fundamentals, networking, Linux, Python, web security, AI, authorized penetration testing, secure software development, blue-team operations, cloud security, digital forensics, DevSecOps, and security governance. Paths are organized across Basic (Beginner), Intermediate, and Advanced levels, with structured modules, focused lessons, practical exercises, and course knowledge checks. The ethical penetration-testing path includes 3 beginner modules and 4 modules at both intermediate and advanced levels. Existing databases receive curriculum updates automatically when the API starts; learner accounts and lesson progress are preserved.
 
 ## Stack
 

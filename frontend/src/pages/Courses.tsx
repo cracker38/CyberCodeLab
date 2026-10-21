@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Seo } from "../components/Seo";
 import { AsyncState, CardLink, Field, PageHeader, ProgressBar, inputClass } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
@@ -16,12 +17,12 @@ const COURSE_LEVELS = [
   {
     value: "Intermediate",
     title: "Intermediate",
-    description: "Build on the fundamentals with coding, web security, cloud, defensive operations, and secure development.",
+    description: "Build on the fundamentals with coding, cloud, defensive operations, secure development, and authorized penetration testing.",
   },
   {
     value: "Advanced",
     title: "Advanced",
-    description: "Apply deeper investigation and engineering skills to forensics, incident response, and secure delivery.",
+    description: "Apply deeper investigation and engineering skills to forensics, incident response, advanced assessment, and secure delivery.",
   },
 ] as const;
 
@@ -57,17 +58,33 @@ export function CoursesPage() {
     <>
       <Seo
         title="Courses"
-        description="Explore structured cybersecurity courses in ethical penetration testing, secure development, blue-team operations, cloud security, forensics, DevSecOps, privacy, and more."
+        description="Explore structured cybersecurity courses in authorized penetration testing, secure development, blue-team operations, cloud security, forensics, DevSecOps, privacy, and more."
         path="/courses"
       />
       <div className="page-wrap py-12">
         <PageHeader kicker="Learn · Courses" title="Structured courses">
           <p>
-            Build skills across defensive operations, cloud, secure software, forensics, and governance. Courses include
+            Build skills across authorized security testing, defensive operations, cloud, secure software, forensics, and governance. Courses include
             organized modules, focused lessons, practical exercises, and knowledge checks. Follow the levels from basic
             beginner foundations through intermediate practice to advanced specializations. Sign in to save progress.
           </p>
         </PageHeader>
+        <Link
+          to="/paths/ethical-penetration-testing"
+          className="surface mt-7 flex items-center gap-4 p-4 transition-colors hover:border-accent/40 sm:p-5"
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-accent/15 bg-accent/10 text-accent" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.75 4.5 7.5v5.25c0 4.1 3.2 6.55 7.5 7.5 4.3-.95 7.5-3.4 7.5-7.5V7.5L12 3.75Zm-3 8 2 2 4-4" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-accent">Featured learning path · three levels</span>
+            <span className="mt-1 block font-semibold text-white">Ethical Penetration Testing</span>
+            <span className="mt-1 block text-sm text-slate-400">Progress through Basic, Intermediate, and Advanced modules in contained, authorized labs.</span>
+          </span>
+          <span className="hidden shrink-0 text-sm font-medium text-accent sm:block">Explore path <span aria-hidden="true">→</span></span>
+        </Link>
         <div className="mt-8 overflow-x-auto pb-1" role="group" aria-label="Filter courses by level">
           <div className="flex w-max min-w-full gap-2">
             <button
