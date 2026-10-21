@@ -9,6 +9,7 @@ export function ProgressBar({ percent, label }: { percent: number; label?: strin
       <div
         className="h-2.5 overflow-hidden rounded-full bg-white/[0.07]"
         role="progressbar"
+        aria-label={label ?? "Progress"}
         aria-valuenow={p}
         aria-valuemin={0}
         aria-valuemax={100}

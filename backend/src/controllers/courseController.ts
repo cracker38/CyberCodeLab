@@ -52,7 +52,7 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
 
   const userId = req.user?.id;
   const enrolledMap = new Map<string, { completed: boolean }>();
-  const progressMap = new Map<string, { done: number; total: number }>();
+  const progressMap = new Map<string, { done: number; started: number; total: number }>();
   if (userId) {
     const enrolls = db
       .prepare("SELECT course_id, completed_at FROM enrollments WHERE user_id = ?")
@@ -62,14 +62,15 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
       .prepare(
         `SELECT m.course_id as course_id,
            COUNT(l.id) as total,
-           SUM(CASE WHEN lp.completed = 1 THEN 1 ELSE 0 END) as done
+           SUM(CASE WHEN lp.completed = 1 THEN 1 ELSE 0 END) as done,
+           SUM(CASE WHEN lp.completed = 0 THEN 1 ELSE 0 END) as started
          FROM lessons l
          JOIN modules m ON m.id = l.module_id
          LEFT JOIN lesson_progress lp ON lp.lesson_id = l.id AND lp.user_id = ?
          GROUP BY m.course_id`,
       )
-      .all(userId) as { course_id: string; total: unknown; done: unknown }[];
-    progress.forEach((p) => progressMap.set(p.course_id, { total: num(p.total), done: num(p.done) }));
+      .all(userId) as { course_id: string; total: unknown; done: unknown; started: unknown }[];
+    progress.forEach((p) => progressMap.set(p.course_id, { total: num(p.total), done: num(p.done), started: num(p.started) }));
   }
 
   res.json({
@@ -85,6 +86,8 @@ export const listCourses = asyncHandler(async (req: Request, res: Response) => {
         completed: Boolean(enroll?.completed),
         progressPercent: total === 0 ? 0 : Math.round((done / total) * 100),
         lessonCount: total,
+        lessonsCompleted: done,
+        lessonsStarted: prog?.started ?? 0,
         hasAssessment: assessedCourseIds.has(String(row.id)),
       };
     }),
@@ -117,6 +120,7 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
     .all(courseId) as Record<string, unknown>[];
 
   let completedLessonIds: string[] = [];
+  let startedLessonIds: string[] = [];
   let enrolled = false;
   if (req.user) {
     enrolled = Boolean(
@@ -124,13 +128,24 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
         .prepare("SELECT id FROM enrollments WHERE user_id = ? AND course_id = ?")
         .get(req.user.id, courseId),
     );
-    completedLessonIds = (
+    const lessonProgress = (
+      db
+        .prepare(
+          `SELECT lp.lesson_id, lp.completed FROM lesson_progress lp
+           JOIN lessons l ON l.id = lp.lesson_id
+           JOIN modules m ON m.id = l.module_id
+           WHERE lp.user_id = ? AND m.course_id = ? AND lp.completed = 1`,
+        )
+        .all(req.user.id, courseId) as { lesson_id: string }[]
+    );
+    completedLessonIds = lessonProgress.map((r) => r.lesson_id);
+    startedLessonIds = (
       db
         .prepare(
           `SELECT lp.lesson_id FROM lesson_progress lp
            JOIN lessons l ON l.id = lp.lesson_id
            JOIN modules m ON m.id = l.module_id
-           WHERE lp.user_id = ? AND m.course_id = ? AND lp.completed = 1`,
+           WHERE lp.user_id = ? AND m.course_id = ? AND lp.completed = 0`,
         )
         .all(req.user.id, courseId) as { lesson_id: string }[]
     ).map((r) => r.lesson_id);
@@ -138,33 +153,46 @@ export const getCourse = asyncHandler(async (req: Request, res: Response) => {
 
   const totalLessons = lessons.length;
   const completed = completedLessonIds.length;
+  const started = startedLessonIds.length;
   const progress = totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
   const continueLesson = lessons.find((l) => !completedLessonIds.includes(String(l.id)));
+  const courseLessonOrder = new Map(lessons.map((lesson, index) => [String(lesson.id), index + 1]));
 
   const quiz = db.prepare("SELECT id, title, passing_score FROM quizzes WHERE course_id = ?").get(courseId) as
     | { id: string; title: string; passing_score: number }
     | undefined;
 
-  const mappedModules = modules.map((m) => ({
-    id: m.id,
-    title: m.title,
-    description: m.description,
-    lessons: lessons
-      .filter((l) => l.module_id === m.id)
-      .map((l) => ({
+  const mappedModules = modules.map((m) => {
+    const moduleLessons = lessons.filter((l) => l.module_id === m.id);
+    const moduleCompleted = moduleLessons.filter((l) => completedLessonIds.includes(String(l.id))).length;
+    const moduleStarted = moduleLessons.filter((l) => startedLessonIds.includes(String(l.id))).length;
+    return {
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      progress: {
+        completed: moduleCompleted,
+        started: moduleStarted,
+        total: moduleLessons.length,
+        percent: moduleLessons.length === 0 ? 0 : Math.round((moduleCompleted / moduleLessons.length) * 100),
+      },
+      lessons: moduleLessons.map((l) => ({
         id: l.id,
         slug: l.slug,
         title: l.title,
         durationMinutes: num(l.duration_minutes),
         completed: completedLessonIds.includes(String(l.id)),
+        started: startedLessonIds.includes(String(l.id)),
+        position: courseLessonOrder.get(String(l.id)) ?? 0,
       })),
-  }));
+    };
+  });
 
   res.json({
     course: mapCourse(course),
     modules: mappedModules,
     enrolled,
-    progress: { completed, total: totalLessons, percent: progress },
+    progress: { completed, started, total: totalLessons, percent: progress },
     continueLesson: continueLesson
       ? { slug: continueLesson.slug, title: continueLesson.title }
       : mappedModules.flatMap((m) => m.lessons)[0]
@@ -211,11 +239,11 @@ export const getLesson = asyncHandler(async (req: Request, res: Response) => {
 
   const siblings = db
     .prepare(
-      `SELECT l.slug, l.title, m.sort_order as module_order, l.sort_order
+      `SELECT l.id, l.slug, l.title, m.sort_order as module_order, l.sort_order
        FROM lessons l JOIN modules m ON m.id = l.module_id
        WHERE m.course_id = ? ORDER BY m.sort_order, l.sort_order`,
     )
-    .all(courseId) as { slug: string; title: string }[];
+    .all(courseId) as { id: string; slug: string; title: string }[];
   const index = siblings.findIndex((s) => s.slug === lesson.slug);
   const prev = index > 0 ? siblings[index - 1] : null;
   const next = index < siblings.length - 1 ? siblings[index + 1] : null;
@@ -225,12 +253,28 @@ export const getLesson = asyncHandler(async (req: Request, res: Response) => {
     .get(lessonId) as { id: string; title: string; passing_score: number } | undefined;
 
   let completed = false;
+  let started = false;
+  let completedInCourse = 0;
+  let startedInCourse = 0;
   if (req.user) {
-    completed = Boolean(
-      db
-        .prepare("SELECT id FROM lesson_progress WHERE user_id = ? AND lesson_id = ? AND completed = 1")
-        .get(req.user.id, lessonId),
-    );
+    const progress = db
+      .prepare("SELECT completed FROM lesson_progress WHERE user_id = ? AND lesson_id = ?")
+      .get(req.user.id, lessonId) as { completed: number } | undefined;
+    completed = Boolean(progress?.completed);
+    started = Boolean(progress);
+    const courseCounts = db
+      .prepare(
+        `SELECT
+           COUNT(CASE WHEN lp.completed = 1 THEN 1 END) as completed,
+           COUNT(CASE WHEN lp.completed = 0 THEN 1 END) as started
+         FROM lessons l
+         JOIN modules m ON m.id = l.module_id
+         LEFT JOIN lesson_progress lp ON lp.lesson_id = l.id AND lp.user_id = ?
+         WHERE m.course_id = ?`,
+      )
+      .get(req.user.id, courseId) as { completed: unknown; started: unknown };
+    completedInCourse = num(courseCounts.completed);
+    startedInCourse = num(courseCounts.started);
   }
 
   res.json({
@@ -246,6 +290,14 @@ export const getLesson = asyncHandler(async (req: Request, res: Response) => {
       durationMinutes: num(lesson.duration_minutes),
       moduleTitle: lesson.module_title,
       completed,
+      started,
+    },
+    courseProgress: {
+      completed: completedInCourse,
+      started: startedInCourse,
+      total: siblings.length,
+      percent: siblings.length === 0 ? 0 : Math.round((completedInCourse / siblings.length) * 100),
+      position: index + 1,
     },
     prev,
     next,
@@ -267,11 +319,51 @@ export const enroll = asyncHandler(async (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+export const startLesson = asyncHandler(async (req: Request, res: Response) => {
+  const lesson = db
+    .prepare(
+      `SELECT l.id, c.id as course_id, c.published
+       FROM lessons l
+       JOIN modules m ON m.id = l.module_id
+       JOIN courses c ON c.id = m.course_id
+       WHERE l.id = ?`,
+    )
+    .get(req.params.lessonId) as { id: string; course_id: string; published: number } | undefined;
+  const staff = req.user?.role === "ADMIN" || req.user?.role === "INSTRUCTOR";
+  if (!lesson || (!bool(lesson.published) && !staff)) {
+    res.status(404).json({ error: "Lesson not found." });
+    return;
+  }
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
+      "INSERT OR IGNORE INTO enrollments (id, user_id, course_id, enrolled_at) VALUES (?, ?, ?, ?)",
+    ).run(id(), req.user!.id, lesson.course_id, nowIso());
+    db.prepare(
+      "INSERT OR IGNORE INTO lesson_progress (id, user_id, lesson_id, completed, completed_at) VALUES (?, ?, ?, 0, NULL)",
+    ).run(id(), req.user!.id, lesson.id);
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+  res.json({ ok: true, started: true });
+});
+
 export const completeLesson = asyncHandler(async (req: Request, res: Response) => {
-  const lesson = db.prepare("SELECT id, module_id FROM lessons WHERE id = ?").get(req.params.lessonId) as
-    | { id: string; module_id: string }
+  const lesson = db
+    .prepare(
+      `SELECT l.id, l.module_id, c.published FROM lessons l
+       JOIN modules m ON m.id = l.module_id
+       JOIN courses c ON c.id = m.course_id
+       WHERE l.id = ?`,
+    )
+    .get(req.params.lessonId) as
+    | { id: string; module_id: string; published: number }
     | undefined;
-  if (!lesson) {
+  const staff = req.user?.role === "ADMIN" || req.user?.role === "INSTRUCTOR";
+  if (!lesson || (!bool(lesson.published) && !staff)) {
     res.status(404).json({ error: "Lesson not found." });
     return;
   }
@@ -280,59 +372,68 @@ export const completeLesson = asyncHandler(async (req: Request, res: Response) =
       `SELECT c.id FROM courses c JOIN modules m ON m.course_id = c.id WHERE m.id = ?`,
     )
     .get(lesson.module_id) as { id: string };
-  db.prepare(
-    `INSERT OR IGNORE INTO enrollments (id, user_id, course_id, enrolled_at) VALUES (?, ?, ?, ?)`,
-  ).run(id(), req.user!.id, course.id, nowIso());
-  db.prepare(
-    `INSERT INTO lesson_progress (id, user_id, lesson_id, completed, completed_at)
-     VALUES (?, ?, ?, 1, ?)
-     ON CONFLICT(user_id, lesson_id) DO UPDATE SET completed = 1, completed_at = excluded.completed_at`,
-  ).run(id(), req.user!.id, lesson.id, nowIso());
-
-  const totals = db
-    .prepare(
-      `SELECT
-        (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = ?) as total,
-        (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN modules m ON m.id = l.module_id
-         WHERE m.course_id = ? AND lp.user_id = ? AND lp.completed = 1) as done`,
-    )
-    .get(course.id, course.id, req.user!.id) as { total: unknown; done: unknown };
-
-  const total = num(totals.total);
-  const done = num(totals.done);
-
-  const nextRow = db
-    .prepare(
-      `SELECT l.slug, l.title FROM lessons l
-       JOIN modules m ON m.id = l.module_id
-       WHERE m.course_id = ?
-       AND l.id NOT IN (
-         SELECT lesson_id FROM lesson_progress WHERE user_id = ? AND completed = 1
-       )
-       ORDER BY m.sort_order, l.sort_order LIMIT 1`,
-    )
-    .get(course.id, req.user!.id) as { slug: string; title: string } | undefined;
-
+  let total = 0;
+  let done = 0;
+  let nextRow: { slug: string; title: string } | undefined;
   let certificateId: string | null = null;
-  if (total > 0 && done >= total) {
-    db.prepare("UPDATE enrollments SET completed_at = ? WHERE user_id = ? AND course_id = ? AND completed_at IS NULL").run(
-      nowIso(),
-      req.user!.id,
-      course.id,
-    );
-    const existing = db
-      .prepare("SELECT id FROM certificates WHERE user_id = ? AND course_id = ?")
-      .get(req.user!.id, course.id) as { id: string } | undefined;
-    if (existing) certificateId = existing.id;
-    else {
-      certificateId = id();
-      db.prepare("INSERT INTO certificates (id, user_id, course_id, issued_at) VALUES (?, ?, ?, ?)").run(
-        certificateId,
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
+      `INSERT OR IGNORE INTO enrollments (id, user_id, course_id, enrolled_at) VALUES (?, ?, ?, ?)`,
+    ).run(id(), req.user!.id, course.id, nowIso());
+    db.prepare(
+      `INSERT INTO lesson_progress (id, user_id, lesson_id, completed, completed_at)
+       VALUES (?, ?, ?, 1, ?)
+       ON CONFLICT(user_id, lesson_id) DO UPDATE SET completed = 1, completed_at = excluded.completed_at`,
+    ).run(id(), req.user!.id, lesson.id, nowIso());
+
+    const totals = db
+      .prepare(
+        `SELECT
+          (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = ?) as total,
+          (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN modules m ON m.id = l.module_id
+           WHERE m.course_id = ? AND lp.user_id = ? AND lp.completed = 1) as done`,
+      )
+      .get(course.id, course.id, req.user!.id) as { total: unknown; done: unknown };
+
+    total = num(totals.total);
+    done = num(totals.done);
+    nextRow = db
+      .prepare(
+        `SELECT l.slug, l.title FROM lessons l
+         JOIN modules m ON m.id = l.module_id
+         WHERE m.course_id = ?
+         AND l.id NOT IN (
+           SELECT lesson_id FROM lesson_progress WHERE user_id = ? AND completed = 1
+         )
+         ORDER BY m.sort_order, l.sort_order LIMIT 1`,
+      )
+      .get(course.id, req.user!.id) as { slug: string; title: string } | undefined;
+
+    if (total > 0 && done >= total) {
+      db.prepare("UPDATE enrollments SET completed_at = ? WHERE user_id = ? AND course_id = ? AND completed_at IS NULL").run(
+        nowIso(),
         req.user!.id,
         course.id,
-        nowIso(),
       );
+      const existing = db
+        .prepare("SELECT id FROM certificates WHERE user_id = ? AND course_id = ?")
+        .get(req.user!.id, course.id) as { id: string } | undefined;
+      if (existing) certificateId = existing.id;
+      else {
+        certificateId = id();
+        db.prepare("INSERT INTO certificates (id, user_id, course_id, issued_at) VALUES (?, ?, ?, ?)").run(
+          certificateId,
+          req.user!.id,
+          course.id,
+          nowIso(),
+        );
+      }
     }
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
   }
   res.json({
     ok: true,

@@ -86,10 +86,17 @@ export function CoursesPage() {
                 footer={
                   <div className="mt-4">
                     {c.enrolled ? (
-                      <ProgressBar
-                        percent={c.progressPercent ?? 0}
-                        label={c.completed ? "Completed" : `${c.progressPercent ?? 0}% complete`}
-                      />
+                      <>
+                        <ProgressBar
+                          percent={c.progressPercent ?? 0}
+                          label={c.completed
+                            ? `Completed · ${c.lessonCount ?? 0} lessons`
+                            : `${c.lessonsCompleted ?? 0} of ${c.lessonCount ?? 0} lessons · ${c.progressPercent ?? 0}% complete`}
+                        />
+                        {(c.lessonsStarted ?? 0) > 0 && !c.completed && (
+                          <p className="mt-2 text-xs text-amber-200">{c.lessonsStarted} lesson{c.lessonsStarted === 1 ? "" : "s"} in progress</p>
+                        )}
+                      </>
                     ) : (
                       <p className="font-mono text-[11px] text-slate-500">
                         {c.lessonCount ? `${c.lessonCount} lessons` : "Open to view the syllabus"}

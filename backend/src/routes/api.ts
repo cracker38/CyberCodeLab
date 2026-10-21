@@ -12,6 +12,7 @@ apiRouter.get("/courses", optionalAuth, courses.listCourses);
 apiRouter.get("/courses/:slug", optionalAuth, courses.getCourse);
 apiRouter.post("/courses/:slug/enroll", requireAuth, courses.enroll);
 apiRouter.get("/courses/:slug/lessons/:lessonSlug", optionalAuth, courses.getLesson);
+apiRouter.post("/lessons/:lessonId/start", requireAuth, courses.startLesson);
 apiRouter.post("/lessons/:lessonId/complete", requireAuth, courses.completeLesson);
 
 apiRouter.get("/labs", optionalAuth, catalog.listLabs);

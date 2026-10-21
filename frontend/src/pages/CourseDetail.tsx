@@ -13,10 +13,11 @@ type Payload = {
     id: string;
     title: string;
     description: string;
-    lessons: { id: string; slug: string; title: string; durationMinutes: number; completed: boolean }[];
+    progress: { completed: number; started: number; total: number; percent: number };
+    lessons: { id: string; slug: string; title: string; durationMinutes: number; completed: boolean; started: boolean; position: number }[];
   }[];
   enrolled: boolean;
-  progress: { completed: number; total: number; percent: number };
+  progress: { completed: number; started: number; total: number; percent: number };
   continueLesson: { slug: string; title: string } | null;
   quiz?: { id: string; title: string } | null;
   relatedLabs: { slug: string; title: string; difficulty: string }[];
@@ -45,6 +46,7 @@ export function CourseDetailPage() {
   if (error) return <p className="mx-auto max-w-3xl px-4 py-16 text-red-300">{error}</p>;
   if (!data) return <p className="mx-auto max-w-3xl px-4 py-16 text-slate-400">Loading course…</p>;
   const { course, modules, progress, quiz, continueLesson } = data;
+  const lessonCount = modules.reduce((total, module) => total + module.lessons.length, 0);
   const relatedLabs = data.relatedLabs ?? [];
   const relatedProjects = data.relatedProjects ?? [];
   const first = continueLesson ?? modules.flatMap((m) => m.lessons)[0];
@@ -70,30 +72,36 @@ export function CourseDetailPage() {
   return (
     <>
       <Seo title={course.title} description={course.description} path={`/courses/${course.slug}`} />
-      <div className="mx-auto max-w-3xl px-4 py-12">
+      <div className="mx-auto max-w-4xl px-4 py-12">
         <Breadcrumbs items={[{ to: "/courses", label: "Courses" }, { label: course.title }]} />
         <p className="font-mono text-xs uppercase tracking-widest text-accent">{course.category}</p>
-        <h1 className="mt-2 text-3xl font-semibold">{course.title}</h1>
-        <p className="mt-3 text-slate-400">{course.description}</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">{course.title}</h1>
+        {course.subtitle && <p className="mt-3 text-lg text-slate-300">{course.subtitle}</p>}
+        <p className="mt-3 max-w-3xl leading-relaxed text-slate-400">{course.description}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge>{course.level}</Badge>
           <Badge>{`${course.estimatedHours} hours`}</Badge>
+          <Badge>{`${modules.length} modules`}</Badge>
+          <Badge>{`${lessonCount} lessons`}</Badge>
         </div>
 
-        <div className="surface mt-8 p-5">
-          <ProgressBar percent={progress.percent} label={`Progress: ${progress.percent}%`} />
-          <p className="mt-2 font-mono text-xs text-slate-500">
-            {"█".repeat(Math.round(progress.percent / 5))}
-            {"░".repeat(20 - Math.round(progress.percent / 5))}
-          </p>
-          <p className="mt-2 text-sm text-slate-400">
-            {progress.completed} / {progress.total} lessons completed
-          </p>
-          <button className="btn-primary mt-4" disabled={busy} onClick={() => void goLearn()}>
+        <section className="surface mt-8 p-5 sm:p-6" aria-label="Course progress">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-widest text-slate-400">Course progress</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{progress.percent}%</p>
+            </div>
+            <p className="text-right text-sm text-slate-400">
+              <span className="block font-medium text-white">{progress.completed} of {progress.total} lessons complete</span>
+              {progress.started > 0 && <span className="mt-1 block">{progress.started} in progress</span>}
+            </p>
+          </div>
+          <div className="mt-4"><ProgressBar percent={progress.percent} label="Completed lessons" /></div>
+          <button className="btn-primary mt-5" disabled={busy} onClick={() => void goLearn()}>
             {busy ? "Opening course..." : data.enrolled ? (progress.percent >= 100 ? "Review course" : "Continue learning") : "Enroll & start"}
           </button>
           {actionError && <p className="mt-3 text-sm text-red-300" role="alert">{actionError}</p>}
-        </div>
+        </section>
 
         {course.prerequisites.length > 0 && (
           <div className="mt-8">
@@ -106,39 +114,64 @@ export function CourseDetailPage() {
           </div>
         )}
 
-        <div className="mt-8">
-          <h2 className="font-semibold">Learning objectives</h2>
-          <ul className="mt-2 list-disc pl-5 text-sm text-slate-400">
+        {course.learningObjectives.length > 0 && <section className="mt-10">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-accent">Course outcomes</p>
+          <h2 className="mt-1 text-xl font-semibold text-white">What you will learn</h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {course.learningObjectives.map((p) => (
-              <li key={p}>{p}</li>
+              <li key={p} className="surface flex items-start gap-3 p-4 text-sm leading-relaxed text-slate-300">
+                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent/10 text-xs text-accent" aria-hidden="true">✓</span>
+                {p}
+              </li>
             ))}
           </ul>
-        </div>
+        </section>}
 
-        <div className="mt-10 space-y-6">
-          {modules.map((m) => (
-            <section key={m.id}>
-              <h3 className="text-lg font-semibold">{m.title}</h3>
-              <p className="text-sm text-slate-500">{m.description}</p>
-              <ul className="mt-3 divide-y divide-line overflow-hidden rounded-xl border border-line">
+        <section className="mt-12" aria-label="Course curriculum">
+          <div className="mb-5">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-accent">Course curriculum</p>
+            <h2 className="mt-1 text-2xl font-semibold text-white">Lessons and modules</h2>
+            <p className="mt-2 text-sm text-slate-400">Work through the lessons in order. Your progress is saved as you start and complete each lesson.</p>
+          </div>
+          <div className="space-y-5">
+          {modules.map((m, moduleIndex) => (
+            <section key={m.id} className="surface overflow-hidden">
+              <div className="p-5 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-accent">Module {String(moduleIndex + 1).padStart(2, "0")}</p>
+                    <h3 className="mt-1 text-lg font-semibold text-white">{m.title}</h3>
+                    {m.description && <p className="mt-1 max-w-2xl text-sm text-slate-400">{m.description}</p>}
+                  </div>
+                  <p className="text-sm tabular-nums text-slate-400">{m.progress.completed}/{m.progress.total} complete</p>
+                </div>
+                <div className="mt-4"><ProgressBar percent={m.progress.percent} label={`${m.progress.percent}% module progress`} /></div>
+              </div>
+              <ul className="divide-y divide-line border-t border-line">
                 {m.lessons.map((l) => (
                   <li key={l.id}>
                     <Link
                       to={`/courses/${course.slug}/lessons/${l.slug}`}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-ink-800"
+                      className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/[0.025] sm:px-6"
                     >
-                      <span className={l.completed ? "text-accent" : ""}>
-                        {l.completed ? "✓ " : ""}
-                        {l.title}
+                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-semibold tabular-nums ${l.completed ? "border-accent/30 bg-accent/10 text-accent" : l.started ? "border-amber-300/30 bg-amber-300/10 text-amber-200" : "border-line bg-ink-900 text-slate-500"}`} aria-hidden="true">
+                        {l.completed ? "✓" : String(l.position).padStart(2, "0")}
                       </span>
-                      <span className="font-mono text-xs text-slate-500">{l.durationMinutes}m</span>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block font-medium transition-colors group-hover:text-accent ${l.completed ? "text-slate-300" : "text-white"}`}>{l.title}</span>
+                        <span className="mt-1 block text-xs text-slate-500">{l.durationMinutes} min read</span>
+                      </span>
+                      <span className={`shrink-0 text-xs ${l.completed ? "text-accent" : l.started ? "text-amber-200" : "text-slate-500"}`}>
+                        {l.completed ? "Completed" : l.started ? "In progress" : "Not started"}
+                      </span>
                     </Link>
                   </li>
                 ))}
               </ul>
             </section>
           ))}
-        </div>
+          </div>
+        </section>
 
         {quiz && user && (
           <Link to={`/quizzes/${quiz.id}`} className="mt-8 inline-block text-accent">

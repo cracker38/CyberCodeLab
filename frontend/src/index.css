@@ -92,6 +92,10 @@ h3 {
   @apply mt-6 mb-2 text-lg font-semibold text-white;
 }
 
+.prose-lesson h4 {
+  @apply mt-5 mb-2 text-base font-semibold text-white;
+}
+
 .prose-lesson h2 {
   @apply mt-8 mb-3 text-xl font-semibold tracking-tight text-white;
 }
@@ -127,6 +131,14 @@ h3 {
 
 .prose-lesson pre {
   @apply overflow-x-auto rounded-xl border border-white/10 bg-ink-950 p-4 font-mono text-sm text-teal-100;
+}
+
+.prose-lesson pre code {
+  @apply bg-transparent p-0 text-inherit;
+}
+
+.prose-lesson hr {
+  @apply my-6 border-white/10;
 }
 
 @media (prefers-reduced-motion: reduce) {

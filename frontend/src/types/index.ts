@@ -25,6 +25,9 @@ export type Course = {
   completed?: boolean;
   progressPercent?: number;
   lessonCount?: number;
+  lessonsCompleted?: number;
+  lessonsStarted?: number;
+  hasAssessment?: boolean;
 };
 
 export type LabCard = {
