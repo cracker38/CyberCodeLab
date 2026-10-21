@@ -1,12 +1,13 @@
 import { db, nowIso } from "../config/db.js";
 import { id } from "../utils/ids.js";
+import { penetrationTestingCourses } from "./penetrationTestingCurriculum.js";
 
 type Answer = { label: string; correct: boolean };
 type Question = { prompt: string; explanation: string; answers: Answer[] };
 type Lesson = { slug: string; title: string; minutes: number; content: string; exercise: string; code?: string };
 type Module = { title: string; description: string; lessons: Lesson[] };
 
-type ExpandedCourse = {
+export type ExpandedCourse = {
   slug: string;
   title: string;
   subtitle: string;
@@ -22,7 +23,7 @@ type ExpandedCourse = {
   lab: { slug: string; title: string; category: string; difficulty: "Beginner" | "Intermediate" | "Advanced"; description: string; objectives: string[]; instructions: string };
 };
 
-const courses: ExpandedCourse[] = [
+const specialistCourses: ExpandedCourse[] = [
   {
     slug: "secure-software-development",
     title: "Secure Software Development",
@@ -302,6 +303,8 @@ const courses: ExpandedCourse[] = [
     lab: { slug: "privacy-data-mapping-lab", title: "Map a data lifecycle", category: "Governance Labs", difficulty: "Intermediate", description: "Map fictional customer data through a service and identify practical privacy and security controls.", objectives: ["Map collection and sharing", "Choose data retention and access rules", "Define verifiable control evidence"], instructions: `## Scenario\nA fictional support portal collects a name, email address, issue description, and optional attachment. Use only invented data.\n\n## Map\n1. Record why each field is collected and who can access it.\n2. Identify storage, backups, suppliers, exports, and deletion points.\n3. Mark one unnecessary field or overbroad access path.\n4. Propose a retention rule, an access control, and evidence that each is operating.\n\n## Deliverable\nSubmit the map, three prioritized actions, and any assumptions that require review by privacy or legal specialists.` },
   },
 ];
+
+const courses: ExpandedCourse[] = [...specialistCourses, ...penetrationTestingCourses];
 
 export function syncExpandedCurriculum(): void {
   const timestamp = nowIso();

@@ -57,7 +57,7 @@ export function CoursesPage() {
     <>
       <Seo
         title="Courses"
-        description="Explore structured cybersecurity courses in secure development, blue-team operations, cloud security, forensics, DevSecOps, privacy, and more."
+        description="Explore structured cybersecurity courses in ethical penetration testing, secure development, blue-team operations, cloud security, forensics, DevSecOps, privacy, and more."
         path="/courses"
       />
       <div className="page-wrap py-12">
@@ -68,19 +68,33 @@ export function CoursesPage() {
             beginner foundations through intermediate practice to advanced specializations. Sign in to save progress.
           </p>
         </PageHeader>
-        <div className="surface mt-8 grid gap-4 p-4 md:grid-cols-3">
+        <div className="mt-8 overflow-x-auto pb-1" role="group" aria-label="Filter courses by level">
+          <div className="flex w-max min-w-full gap-2">
+            <button
+              type="button"
+              aria-pressed={!level}
+              onClick={() => setLevel("")}
+              className={`shrink-0 rounded-full border px-5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${!level ? "border-accent bg-accent text-ink-950" : "border-line bg-ink-900/70 text-slate-300 hover:border-accent/50 hover:text-white"}`}
+            >
+              All
+            </button>
+            {COURSE_LEVELS.map((courseLevel) => (
+              <button
+                key={courseLevel.value}
+                type="button"
+                aria-label={courseLevel.value === "Beginner" ? "Basic (Beginner)" : courseLevel.value}
+                aria-pressed={level === courseLevel.value}
+                onClick={() => setLevel(courseLevel.value)}
+                className={`shrink-0 rounded-full border px-5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${level === courseLevel.value ? "border-accent bg-accent text-ink-950" : "border-line bg-ink-900/70 text-slate-300 hover:border-accent/50 hover:text-white"}`}
+              >
+                {courseLevel.value === "Beginner" ? "Basic" : courseLevel.value}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="surface mt-4 grid gap-4 p-4 md:grid-cols-2">
           <Field label="Search">
             <input className={inputClass} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Title or topic" />
-          </Field>
-          <Field label="Level">
-            <select className={inputClass} value={level} onChange={(e) => setLevel(e.target.value)}>
-              <option value="">All levels</option>
-              {COURSE_LEVELS.map((courseLevel) => (
-                <option key={courseLevel.value} value={courseLevel.value}>
-                  {courseLevel.title}
-                </option>
-              ))}
-            </select>
           </Field>
           <Field label="Category">
             <select className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)}>

@@ -2,6 +2,7 @@ import { db, initSchema, nowIso } from "../config/db.js";
 import { hashPassword } from "../utils/crypto.js";
 import { id } from "../utils/ids.js";
 import { syncExpandedCurriculum } from "./expandedCurriculum.js";
+import { syncFoundationCurriculum } from "./foundationCurriculum.js";
 
 function wipe(): void {
   const tables = [
@@ -945,6 +946,7 @@ Checklist for a VM you created. Never apply unsolicited changes to machines you 
     ts,
   );
 
+  syncFoundationCurriculum();
   syncExpandedCurriculum();
 
   console.log("Seed complete.");
@@ -961,6 +963,7 @@ export async function seedIfEmpty(): Promise<void> {
     count = 0;
   }
   if (count > 0) {
+    syncFoundationCurriculum();
     syncExpandedCurriculum();
     return;
   }
