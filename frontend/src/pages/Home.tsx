@@ -72,7 +72,7 @@ export function HomePage() {
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Learn. Code. Practice. Secure.</p>
             <h1 className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-white md:text-5xl">
-              Master cybersecurity through code.
+              main cybersecurity through code.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-400">
               Structured courses, authorized labs, projects, and a recommended order — so you always know what to do
